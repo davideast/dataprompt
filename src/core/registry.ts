@@ -98,15 +98,15 @@ export function createPluginRegistry(plugins: DatapromptPlugin[] = []) {
 
   const hasOwnFirestore = pluginsToRegister.some(plugin => plugin.name === 'firestore');
   const hasOwnFetch = pluginsToRegister.some(plugin => plugin.name === 'fetch');
-  const hasOwnScheduler = pluginsToRegister.some(plugin => plugin.name === 'scheduler');
+  const hasOwnScheduler = pluginsToRegister.some(plugin => plugin.name === 'schedule');
   if (!hasOwnFirestore) {
+    pluginsToRegister.push(firestorePlugin());
   }
   if (!hasOwnFetch) {
     pluginsToRegister.push(fetchPlugin());
   }
   if (!hasOwnScheduler) {
     pluginsToRegister.push(schedulerPlugin());
-    pluginsToRegister.push(firestorePlugin());
   }
   registry.registerMany(pluginsToRegister);
   return registry;
