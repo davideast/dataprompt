@@ -1,0 +1,28 @@
+{
+  "name": "example",
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@clack/prompts": "^0.9.1",
+    "@genkit-ai/dotprompt": "^0.9.12",
+    "@genkit-ai/googleai": "^0.9.12",
+    "dataprompt": "file:../dataprompt-0.0.1.tgz",
+    "express": "^4.21.0",
+    "firebase-admin": "^13.0.0",
+    "genkit": "^0.9.12"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "genkit-cli": "^0.9.12",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "dev": "dataprompt dev",
+    "dev:ui": "genkit start -- tsx --watch _dev-flows.ts",
+    "reg": "tsx --watch dataprompt.config.ts",
+    "build": "tsc",
+    "start": "dataprompt dev",
+    "typecheck": "tsc --noEmit"
+  }
+}

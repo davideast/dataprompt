@@ -1,0 +1,24 @@
+---
+model: googleai/gemini-2.0-flash-exp
+data.prompt:
+  trigger:
+    # Every 60 seconds
+    schedule: '*/60 * * * * *'
+  sources:
+    firestore:
+      shark: sharks/great-white
+      facts: "/facts"
+  result:
+    firestore:
+      push:
+        - ["/facts", output]
+output:
+  schema: SharkFact
+---
+Tell me a fact about the {{shark.type}} shark.
+Today's date is {{dateFormat "today" format="yyyy-MM-dd"}}
+
+Don't tell me these facts again:
+{{#each facts as |doc|}}
+  - {{doc.fact}}
+{{/each}}

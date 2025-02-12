@@ -1,0 +1,36 @@
+---
+model: googleai/gemini-2.0-flash-exp
+config:
+  temperature: .7
+data.prompt:
+  trigger:
+    # every 24 hours at midnight
+    schedule: "0 0 * * *"
+  sources:
+    fetch:
+      todaysStories: https://api.hnpwa.com/v0/news/1.json
+  result:
+    firestore:
+      set:
+        - ['topStories/{{dateFormat "today" format="yyyy-MM-dd"}}', todaysStories]
+        - ["analysis/{{dateFormat 'today' format='yyyy-MM-dd'}}", output]
+output:
+  schema: HNPageAnalysis
+---
+
+Analyze the top Hacker News stories and provide the following analysis. Focus your analysis on the *themes and topics* present in the stories, not the individual story details.
+
+1. **Summarize the dominant themes and topics** present in the top stories. Be concise (a short paragraph).
+
+2. **Identify the key differences and similarities** between the themes and topics. Again, be concise (a short paragraph).
+
+3. **Provide any interesting insights, trends, or patterns** observed in the comparison of the top stories. This could include the popularity of certain topics, emerging trends, or anything else noteworthy.
+
+4. **Identify the most prominent themes.**
+
+5. **Describe any significant changes in themes, topics, or content types.**  For each significant change, briefly describe the change (e.g., "Increased focus on LLM model capability").
+
+Stories JSON:
+<json>
+{{todaysStories}}
+</json>

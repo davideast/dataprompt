@@ -1,0 +1,12 @@
+---
+model: googleai/gemini-1.5-flash
+data.prompt:
+  firestore:
+    invoice: invoices/:id
+output:
+  schema: DiscrepancySchema
+---
+
+You are responsible for processing an invoice. Perform a basic verification to ensure the invoice is accurate. Check that the quantities, prices, and calculations are correct. Report any discrepancies you find.
+
+{{ invoice }}

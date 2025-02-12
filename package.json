@@ -1,0 +1,60 @@
+{
+  "name": "dataprompt",
+  "version": "0.0.1",
+  "description": "Prompts with data superpowers",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": "./dist/cli/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./firebase": {
+      "import": "./dist/firebase/index.js",
+      "types": "./dist/firebase/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src/firebase/package.json"
+  ],
+  "scripts": {
+    "packx": "npm pack && npm i --prefix ./examples ./dataprompt-0.0.1.tgz",
+    "build": "tsc",
+    "clean": "rimraf /home/user/promptfire/dataprompt-0.0.1.tgz /home/user/promptfire/dist",
+    "prepack": "npm run clean && npm run build",
+    "postbuild": "chmod +x dist/cli/index.js",
+    "c": "tsx ./src/context/index.ts",
+    "cc": "tsx ./src/context/index.ts -c -o context.txt",
+    "c:all": "npm run c -- -o context.txt ./src/dataprompt.ts"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.10",
+    "@types/node-cron": "^3.0.11",
+    "@types/stringify-object": "^4.0.5",
+    "dataprompt": "file:dataprompt-0.0.1.tgz",
+    "nodemon": "^3.1.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.0",
+    "@genkit-ai/flow": "^0.5.17",
+    "@genkit-ai/googleai": "^0.9.12",
+    "@genkit-ai/dotprompt": "^0.9.12",
+    "date-fns": "^4.1.0",
+    "express": "^4.21.2",
+    "find-up": "^7.0.0",
+    "firebase-admin": "^13.0.2",
+    "js-yaml": "^4.1.0",
+    "node-cron": "^3.0.3",
+    "path-to-regexp": "^8.2.0",
+    "picocolors": "^1.1.1"
+  },
+  "peerDependencies": {
+    "genkit": "^0.9.12"
+  }
+}

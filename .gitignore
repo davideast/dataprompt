@@ -1,0 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Compiled output
+dist/
+
+# IDE/editor files
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Firebase
+.firebase/
+firebase-debug.log*
+
+# Secrets and sensitive information
+.env
+*.pem
+*.key
+*.cert
+
+# Package manager lock files
+package-lock.json
+
+/secrets
+sa.json
+gemini.json
+keys.json
+
+
+*.tgz
+context.txt

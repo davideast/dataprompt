@@ -1,0 +1,8 @@
+{
+  "IDX.ai.enableInlineCompletion": true,
+  "IDX.ai.enableCodebaseIndexing": true,
+  "editor.wordWrap": "on",
+  "files.associations": {
+      "*.prompt": "handlebars"
+  }
+}

@@ -1,0 +1,54 @@
+---
+model: googleai/gemini-2.0-flash-exp
+config:
+  temperature: 1.0
+data.prompt:
+  sources:
+    fetch:
+      pageA: https://api.hnpwa.com/v0/news/{{request.params.page}}.json
+      pageB: https://api.hnpwa.com/v0/news/{{request.params.next}}.json
+output:
+  schema: HNAnalysisSchema
+---
+
+Analyze and compare the top Hacker News stories from different pages (provided in JSON format) and provide the following comparison analysis. Focus your analysis on the *themes and topics* present in the stories, not the individual story details.
+
+1. **Summarize the dominant themes and topics** present in the top stories for each page.  Be concise (a short paragraph for each page).
+
+2. **Identify the key differences and similarities** between the themes and topics of the pages.  Again, be concise (a short paragraph for each).
+
+3. **Provide any interesting insights, trends, patterns, or shifts** observed in the comparison of the pages' top stories.  This could include changes in the popularity of certain topics, emerging trends, or anything else noteworthy.
+
+4. **Identify the most prominent themes shared by each page.**
+
+5. **Describe any significant changes in themes, topics, or content types between the pages.**  For each significant change, briefly describe the change (e.g., "Increased focus on LLM model capability").
+
+<page-{{request.params.page}}>
+{{#each pageA.items as |story|}}
+  - {{story.id}}
+  - {{story.title}}
+  - {{story.points}}
+  - {{story.user}}
+  - {{story.time}}
+  - {{story.time_ago}}
+  - {{story.comments_count}}
+  - {{story.type}}
+  - {{story.url}}
+  - {{story.domain}}
+{{/each}}
+</page-{{request.params.page}}>
+
+<page-{{request.params.next}}>
+{{#each pageB.items as |story|}}
+  - {{story.id}}
+  - {{story.title}}
+  - {{story.points}}
+  - {{story.user}}
+  - {{story.time}}
+  - {{story.time_ago}}
+  - {{story.comments_count}}
+  - {{story.type}}
+  - {{story.url}}
+  - {{story.domain}}
+{{/each}}
+</page-{{request.params.next}}>
