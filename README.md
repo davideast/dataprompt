@@ -9,7 +9,7 @@ dataprompt allows you to declare data sources and actions right from a `.prompt`
 
 ## Key Features
 *  **Single File Prompts:** Contain everything a prompt needs from model choice, structured output, data sources, and post-generation actions, right in a single prompt file.
-*   **dotprompt format:**: Extends he [dotprompt](https://github.com/google/dotprompt/) prompt.
+*   **dotprompt format:**: Extends the [dotprompt](https://github.com/google/dotprompt/) prompt.
 *   **File based routing:** All prompts are served over an api server based on file based routing conventions: `prompts/items/[id].prompt`.
 *   **Scheduled Tasks:**: Set prompt files to run on a schedule with node-cron expressions.
 *   **JavaScript API:** Use dataprompt right inside your app by getting dataprompt files as Genkit flows.
