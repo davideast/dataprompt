@@ -25,10 +25,15 @@ npm install dataprompt genkit
 
 ## Getting Started
 
-### Set up a basic project
+```bash
+npx dataprompt create <project-name>
+cd <project-name> && npm i
+# Set env vars to talk to Gemini and Firebase
+# GOOGLEAI_API_KEY=key 
+# GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+npx dataprompt dev # dev server
 ```
-npx dataprompt create <project-directory>
-```
+
 
 ### Create a Single File Prompt
 Create dotprompt, `.prompt`, files that combine Handlebars templating with data sources.
@@ -41,17 +46,17 @@ data:
   sources:
     firestore: # Load from Firestore
       shark: sharks/{{request.params.shark}} # Document path using request params
-      facts: \"/facts\" # Collection path
+      facts: "/facts" # Collection path
   result:
     firestore: # Store the output to Firestore
       push:
-        - [\"/facts\", output] # Add a new document to the collection
-        - [\"/known-sharks\", shark] # Store the shark data
+        - ["/facts", output] # Add a new document to the collection
+        - ["/known-sharks", shark] # Store the shark data
 output:
   schema: SharkFact # Structured output, located in schema.ts
 ---
 Tell me a fact about the {{shark.type}} shark.
-Today's date is {{dateFormat \"today\" format=\"yyyy-MM-dd\"}}
+Today's date is {{dateFormat "today" format="yyyy-MM-dd"}}
 Don't tell me these facts again:
 {{#each facts as |doc|}}
   - {{doc.fact}}
