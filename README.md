@@ -9,13 +9,13 @@ dataprompt allows you to declare data sources and actions right from a `.prompt`
 
 ## Key Features
 *  **Single File Prompts:** Contain everything a prompt needs from model choice, structured output, data sources, and post-generation actions, right in a single prompt file.
-*   **dotprompt format:**: Extends the [dotprompt](https://github.com/google/dotprompt/) prompt.
-*   **File based routing:** All prompts are served over an api server based on file based routing conventions: `prompts/items/[id].prompt`.
-*   **Scheduled Tasks:**: Set prompt files to run on a schedule with node-cron expressions.
-*   **JavaScript API:** Use dataprompt right inside your app by getting dataprompt files as Genkit flows.
-*   **Structured Output:** Use Zod schema's to set structured output.
-*   **Plugin System:** Create your own data sources, actions, and triggers.
-*   **Powered by Genkit:** Every prompt file exports out to a [Genkit](https://firebase.google.com/docs/genkit) flow.
+*  **dotprompt format:**: Extends the [dotprompt](https://github.com/google/dotprompt/) prompt.
+*  **File based routing:** All prompts are served over an api server based on file based routing conventions: `prompts/items/[id].prompt`.
+*  **Scheduled Tasks:**: Set prompt files to run on a schedule with node-cron expressions.
+*  **JavaScript API:** Use dataprompt right inside your app by getting dataprompt files as Genkit flows.
+*  **Structured Output:** Use Zod schema's to set structured output.
+*  **Plugin System:** Create your own data sources, actions, and triggers.
+*  **Powered by Genkit:** Every prompt file exports out to a [Genkit](https://firebase.google.com/docs/genkit) flow.
 
 ## Installation
 
@@ -42,7 +42,7 @@ Create dotprompt, `.prompt`, files that combine Handlebars templating with data 
 ---
 # File: prompts/sharks/[shark].prompt
 model: googleai/gemini-2.0-flash-exp
-data:
+data.prompt:
   sources:
     firestore: # Load from Firestore
       shark: sharks/{{request.params.shark}} # Document path using request params
