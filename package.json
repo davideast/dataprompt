@@ -28,7 +28,7 @@
     "postbuild": "chmod +x dist/cli/index.js",
     "c": "tsx ./src/context/index.ts",
     "cc": "tsx ./src/context/index.ts -c -o context.txt",
-    "c:all": "npm run c -- -o context.txt ./src/dataprompt.ts"
+    "c:all": "npm run c -- -o context.txt ./src/core/dataprompt.ts"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

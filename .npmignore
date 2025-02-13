@@ -1,1 +1,8 @@
+# Custom context tool for dev time only
 src/context
+
+# Ignore test files
+src/**/*.test.ts
+rc/**/*.spec.ts
+src/**/__tests__/*
+test/*
