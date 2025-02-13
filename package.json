@@ -37,13 +37,14 @@
     "@types/stringify-object": "^4.0.5",
     "nodemon": "^3.1.0",
     "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
+    "@genkit-ai/dotprompt": "^0.9.12",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/googleai": "^0.9.12",
-    "@genkit-ai/dotprompt": "^0.9.12",
     "date-fns": "^4.1.0",
     "express": "^4.21.2",
     "find-up": "^7.0.0",

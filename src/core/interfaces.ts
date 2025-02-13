@@ -36,6 +36,7 @@ export interface DatapromptPlugin {
 export type FetchDataParams = {
   request: RequestContext;
   config: any;
+  file: DatapromptFile;
 }
 
 export interface DataSourceProvider {
@@ -47,6 +48,7 @@ export type ExecuteParams = {
   request: RequestContext;
   config: any;
   promptSources: Record<string, any>;
+  file: DatapromptFile;
 }
 
 export interface DataActionProvider {

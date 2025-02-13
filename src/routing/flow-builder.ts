@@ -1,6 +1,6 @@
 import { Genkit, z } from 'genkit';
 import { PromptMetadata, defineDotprompt } from '@genkit-ai/dotprompt';
-import { RequestContext, RequestContextSchema } from '../core/interfaces.js';
+import { DatapromptFile, RequestContext, RequestContextSchema } from '../core/interfaces.js';
 import { PluginRegistry } from '../core/registry.js';
 import { RequestLogger, getLogManager } from '../utils/logging.js';
 import { fetchPromptSources, executeResultActions } from './action-handler.js';
@@ -27,7 +27,8 @@ export interface FlowDefinition<
 export function createPromptFlow(
   ai: Genkit,
   flowDef: FlowDefinition,
-  registry: PluginRegistry
+  registry: PluginRegistry,
+  file: DatapromptFile,
 ) {
   const { data, name, promptOptions, template, inputSchema, outputSchema } = flowDef;
 
@@ -70,7 +71,13 @@ export function createPromptFlow(
       }
 
       // 1.  Fetch Data Sources
-      const promptSources = await fetchPromptSources({ sources, request, logger, registry });
+      const promptSources = await fetchPromptSources({ 
+        sources, 
+        request, 
+        logger, 
+        registry,
+        file, 
+      });
 
       // 2. Prepare prompt input (including fetched data)
       const promptInput = { ...promptSources, request };
@@ -91,7 +98,8 @@ export function createPromptFlow(
         promptSources,
         result,
         registry,
-        logger
+        logger,
+        file,
       });
 
       return result.output;
