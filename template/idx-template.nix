@@ -9,5 +9,6 @@
     npx dataprompt create "$out"
     # Set some permissions
     chmod -R +w "$out"
+    git init
   '';
 }
