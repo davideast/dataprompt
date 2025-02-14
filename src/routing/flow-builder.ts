@@ -57,10 +57,6 @@ export function createPromptFlow(
     template
   );
 
-  if(file.path.includes('fs')) {
-    // console.log({ shape: promptInputSchema.shape })
-  }
-
   return ai.defineFlow(
     {
       name,
@@ -85,10 +81,6 @@ export function createPromptFlow(
 
       // 2. Prepare prompt input (including fetched data)
       const promptInput = { ...promptSources, request };
-
-      if(file.path.includes('fs')) {
-        // console.log({ promptInput })
-      }
 
       // 3. Render prompt (for logging)
       if (logger) {

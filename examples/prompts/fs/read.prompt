@@ -3,12 +3,12 @@ model: googleai/gemini-2.0-flash-exp
 data.prompt:
   sources:
     fs:
-      message: 
-        path: ./message.txt  # Accesses sandbox dir
+      # located in sandbox (normally ./tmp/dataprompt-sandbox)
+      message: message.txt 
 output:
   schema: Message
 ---
 
-What does this message say?
+Tell me something about this file named message.txt. What should we do next? What is your recommendation? Speak like William Shakespeare.
 
-{{message}}
+{{json message}}

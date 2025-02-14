@@ -13,8 +13,9 @@ import { fetchData } from './source.js';
 
 export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptPlugin {
   const name = 'fs';
-  // Determine the sandbox path
+  // Determine the sandbox path 
   const sandboxPath = createSandboxDirectory(pluginConfig);
+
   return {
     name,
     createDataSource(): DataSourceProvider {
