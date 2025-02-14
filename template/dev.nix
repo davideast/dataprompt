@@ -3,12 +3,8 @@
   packages = [
     pkgs.nodejs_20
   ];
-  env = {
-    GOOGLEAI_API_KEY="";
-    GOOGLE_APPLICATION_CREDENTIALS="/path/to/sa.json";
-   };
+  env = { };
   idx = {
-    internal.templates-cli.enable = true;
     extensions = [];
     previews = {
       enable = true;
