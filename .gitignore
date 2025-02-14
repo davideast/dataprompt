@@ -33,7 +33,8 @@ package-lock.json
 sa.json
 gemini.json
 keys.json
-
+set_env.sh
+set-env.sh
 
 *.tgz
 context.txt

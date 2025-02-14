@@ -41,7 +41,7 @@ export type FetchDataParams = {
 
 export interface DataSourceProvider {
   name: string;
-  fetchData(params: FetchDataParams): Promise<Record<string, any>>;
+  fetchData(params: FetchDataParams): Promise<Record<string, any> | string>;
 }
 
 export type ExecuteParams = {
@@ -89,4 +89,5 @@ export interface DatapromptFile {
   path: string;
   content: string;
   nextRoute: string;
+  absolutePath?: string;
 }

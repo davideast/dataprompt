@@ -1,0 +1,14 @@
+---
+model: googleai/gemini-2.0-flash-exp
+data.prompt:
+  sources:
+    fs:
+      message: 
+        path: ./message.txt  # Accesses sandbox dir
+output:
+  schema: Message
+---
+
+What does this message say?
+
+{{message}}
