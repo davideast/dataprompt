@@ -1,19 +1,32 @@
 {
   "name": "dataprompt",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Prompts with data superpowers",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": "./dist/cli/index.js",
+  "license": "Apache-2.0",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./firebase": {
-      "import": "./dist/firebase/index.js",
-      "types": "./dist/firebase/index.d.ts"
+    "./plugins/firebase": {
+      "import": "./dist/plugins/firebase/public.js",
+      "types": "./dist/plugins/firebase/public.d.ts"
+    },
+    "./plugins/fetch": {
+      "import": "./dist/plugins/fetch/public.js",
+      "types": "./dist/plugins/fetch/public.d.ts"
+    },
+    "./plugins/scheduler": {
+      "import": "./dist/plugins/scheduler/public.js",
+      "types": "./dist/plugins/scheduler/public.d.ts"
+    },
+    "./plugins/fs": {
+      "import": "./dist/plugins/fs/public.js",
+      "types": "./dist/plugins/fs/public.d.ts"
     }
   },
   "files": [
@@ -23,7 +36,7 @@
   "scripts": {
     "packx": "npm pack && npm i --prefix ./examples ./dataprompt-0.0.1.tgz",
     "build": "tsc",
-    "clean": "rimraf /home/user/promptfire/dataprompt-0.0.1.tgz /home/user/promptfire/dist",
+    "clean": "rimraf ./dataprompt-0.0.1.tgz ./dist",
     "prepack": "npm run clean && npm run build",
     "postbuild": "chmod +x dist/cli/index.js",
     "c": "tsx ./src/context/index.ts",
@@ -35,16 +48,16 @@
     "@types/node": "^22.10.10",
     "@types/node-cron": "^3.0.11",
     "@types/stringify-object": "^4.0.5",
-    "dataprompt": "file:dataprompt-0.0.1.tgz",
     "nodemon": "^3.1.0",
     "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
+    "@genkit-ai/dotprompt": "^0.9.12",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/googleai": "^0.9.12",
-    "@genkit-ai/dotprompt": "^0.9.12",
     "date-fns": "^4.1.0",
     "express": "^4.21.2",
     "find-up": "^7.0.0",

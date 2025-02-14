@@ -10,6 +10,14 @@ export async function createProject(projectName: string) {
   try {
     s.start("Creating project structure...");
 
+    // create vscode settings
+    await fs.mkdir(path.join(projectPath, ".vscode"), { recursive: true });
+    await fs.writeFile(path.join(projectPath, ".vscode/settings.json"), JSON.stringify({
+      "files.associations": {
+        "*.prompt": "handlebars"
+      },
+    }))
+
     // Create project directories
     await fs.mkdir(path.join(projectPath, "prompts"), { recursive: true });
     await fs.mkdir(path.join(projectPath, "prompts/sharks"), { recursive: true });
@@ -26,7 +34,7 @@ const store = await dataprompt()
 export const flowExports = store.flows.list().reduce((acc, flow, index) => {
   acc[flow.name || \`flow$\{index}\`] = flow;
   return acc;
-}, {});
+}, {} as any);
 `;
 
     await fs.writeFile(path.join(projectPath, '_dev-flows.ts'), devFlowsContent);
@@ -39,17 +47,17 @@ export const SharkFact = z.object({
   dateString: z.string().describe('ISO Date String')
 })
     
-export const HackerNewsItemSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  points: z.number().optional(),
-  user: z.string().optional(),
-  time: z.number().optional(),
-  time_ago: z.string().optional(),
-  comments_count: z.number().optional(),
-  type: z.string(),
-  url: z.string().optional(),
-  domain: z.string().optional(),
+export const HackerNewsAnalysisSchema = z.object({
+  tldr: z.string().describe('The no-nonsense summary of the the main items of hacker news'),
+  trends: z.array(z.string()).describe('Interesting trends in the topics seen on hacker news'),
+  topics: z.array(z.string()).describe('The main topics being discussed across news items'),
+  topThree: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    domain: z.string(),
+    points: z.number(),
+    date: z.string().describe('ISO Date String')
+  }).describe('Hacker News Item'))
 });
 `;
     await fs.writeFile(path.join(projectPath, "schema.ts"), schemaContent);
@@ -66,7 +74,7 @@ data.prompt:
         - ["/hackernews-items", news] 
         - ["/analysis", output]
 output:
-  schema: HackerNewsItemSchema
+  schema: HackerNewsAnalysisSchema
 ---
 You are an expert at summarizing Hacker News articles.  Given the following data, provide a concise summary of each article.
 
@@ -114,7 +122,7 @@ Don't tell me these facts again:
         "tsx": "^4.7.1"
       },
       scripts: {
-        "dev": "dataprompt dev",
+        "dev": "npm run build && dataprompt dev",
         "dev:ui": "genkit start -- tsx --watch _dev-flows.ts",
         "build": "tsc",
       }
@@ -126,7 +134,7 @@ Don't tell me these facts again:
 
     // Create .gitignore
     await fs.writeFile(path.join(projectPath, ".gitignore"),
-      `node_modules\n.env\n*.log\ndist\n.genkit\n.env.example`);
+      `node_modules\n.env\n*.log\ndist\n.genkit\n.env.example\nset_env.sh\n*-service-account.json\n*service-account*.json`);
 
     // Create tsconfig.json
     const tsconfigContent = {
@@ -153,9 +161,12 @@ Don't tell me these facts again:
     );
 
     // Create .env.example -  Include Firebase credentials
-    await fs.writeFile(path.join(projectPath, ".env.example"),
-      `GOOGLEAI_API_KEY=YOUR_GOOGLEAI_API_KEY_HERE
-      GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json
+    await fs.writeFile(path.join(projectPath, "set_env.sh"),
+      `#!/usr/bin/env bash
+
+# source ./set_env.sh
+export GOOGLEAI_API_KEY="<your-key>"
+export GOOGLE_APPLICATION_CREDENTIALS="<./your-service-account.json>"
 `);
 
     // Create README.md -  Hacker News and Firestore instructions
@@ -165,19 +176,23 @@ Don't tell me these facts again:
 
 1.  **Install Dependencies:** \`npm install\`
 2.  **Environment Variables:**
-    *   Create a \`.env\` file (or copy \`.env.example\`).
-    *   **Google AI:** Set \`GOOGLEAI_API_KEY=your-googleai-api-key\`
+    *   Set your keys in the \`./set_env.sh\` file.
+    *   **Gemini API:** Set \`GOOGLEAI_API_KEY=your-googleai-api-key\`
+    *   **Firebase Service Account: Set \`GOOGLE_APPLICATION_CREDENTIALS=./your-service-account.json\`**
+3.  Source the environment variables: \`source ./set_env.sh\`
+4.  **Start the Server:** \`npm run dev\`
 
 ## Project Structure
 
--   \`prompts/hackernews/\`
-    -   \`[page].prompt\`: Fetches and stores Hacker News data.
+-   \`prompts/hn.prompt\`: Fetches and stores Hacker News data.
+-   \`prompts/sharks/[shark].prompt\`: Summarizes facts about sharks using a [shark] param.
 -   \`schema.ts\`: Defines Zod schemas.
--   \`_dev-flows.ts\`: For Genkit UI.
+-   \`_dev-flows.ts\`: Exports all flows for the Genkit UI.
 
 ## Available Routes
 
--   \`POST /hackernews/:page\`: Fetches Hacker News data for the given page and saves it to Firestore. The \`:page\` is a dynamic route parameter.  Try \`/hackernews/1\`, \`/hackernews/2\`, etc.
+-   \`GET /hn\`: Fetches Hacker News data for the given page and saves it to Firestore.
+-   \`GET /sharks/:shark\`: Summarizes facts about a specific shark.
 
 ## Development
 

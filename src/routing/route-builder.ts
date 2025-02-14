@@ -41,7 +41,7 @@ export async function createRoute(params: {
   };
 
   // Use the imported createPromptFlow function
-  const callableFlow = createPromptFlow(ai, flowDef, registry);
+  const callableFlow = createPromptFlow(ai, flowDef, registry, file);
 
   return {
     promptFilePath: routePath,

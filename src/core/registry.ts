@@ -4,8 +4,8 @@ import {
   TriggerProvider, 
   DatapromptPlugin 
 } from './interfaces.js';
-import { firestorePlugin } from '../firebase/index.js';
-import { schedulerPlugin } from '../plugins/schedule/index.js';
+import { firestorePlugin } from '../plugins/firebase/public.js';
+import { schedulerPlugin } from '../plugins/scheduler/index.js';
 import { fetchPlugin } from '../plugins/fetch/index.js';
 
 export class PluginRegistry {
@@ -94,11 +94,14 @@ export class PluginRegistry {
 
 export function createPluginRegistry(plugins: DatapromptPlugin[] = []) {
   const registry = new PluginRegistry();
-  const pluginsToRegister = [...plugins];
+  const pluginsToRegister = [
+    ...plugins,
+  ];
 
   const hasOwnFirestore = pluginsToRegister.some(plugin => plugin.name === 'firestore');
   const hasOwnFetch = pluginsToRegister.some(plugin => plugin.name === 'fetch');
   const hasOwnScheduler = pluginsToRegister.some(plugin => plugin.name === 'schedule');
+  
   if (!hasOwnFirestore) {
     pluginsToRegister.push(firestorePlugin());
   }
@@ -108,6 +111,7 @@ export function createPluginRegistry(plugins: DatapromptPlugin[] = []) {
   if (!hasOwnScheduler) {
     pluginsToRegister.push(schedulerPlugin());
   }
+
   registry.registerMany(pluginsToRegister);
   return registry;
 }

@@ -1,4 +1,4 @@
-import { DataActionProvider, DataSourceProvider, DatapromptPlugin } from '../../core/interfaces.js';
+import { DataActionProvider, DataSourceProvider, DatapromptPlugin } from '../../../core/interfaces.js';
 import { getFirebaseApp } from '../app.js'
 import { getFirestore } from 'firebase-admin/firestore';
 import { fetchData } from './source.js'
