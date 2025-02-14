@@ -1,3 +1,9 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import os from 'os';
+import { FileSystemPluginConfig, FileSystemReadConfig, FileSystemWriteConfig, WriteOperationType } from './types.js'
+import { fetchData } from './source.js';
+import { execute } from './actions.js';
 import {
   DataSourceProvider,
   DataActionProvider,
@@ -5,15 +11,10 @@ import {
   RequestContext,
   DatapromptFile,
 } from '../../core/interfaces.js';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import os from 'os';
-import { FileSystemPluginConfig, FileSystemReadConfig, FileSystemWriteConfig } from './types.js'
-import { fetchData } from './source.js';
 
 export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptPlugin {
   const name = 'fs';
-  // Determine the sandbox path 
+  // Determine the sandbox path
   const sandboxPath = createSandboxDirectory(pluginConfig);
 
   return {
@@ -25,7 +26,7 @@ export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptP
           request: RequestContext;
           config: string | FileSystemReadConfig;
           file: DatapromptFile;
-        }): Promise<Record<string, any> | string> {
+        }): Promise<Record<string, any> | Buffer | string> {
           return fetchData(params, sandboxPath);
         },
       };
@@ -35,10 +36,11 @@ export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptP
         name,
         async execute(params: {
           request: RequestContext;
-          config: FileSystemWriteConfig;
+          config: Record<WriteOperationType, FileSystemWriteConfig | FileSystemWriteConfig[]>;
           promptSources: Record<string, any>;
+          file: DatapromptFile;
         }): Promise<void> {
-          throw new Error('File write not implemented yet.');
+          return execute(params, sandboxPath)
         },
       };
     },

@@ -14,7 +14,7 @@ export async function fetchData(params: {
   const fsConfig: FileSystemReadConfig =
     typeof config === 'string' ? { path: config } : config;
 
-  if (!file?.absolutePath) {
+  if (!file.absolutePath) {
     throw new Error("Prompt file path is required for file operations.");
   }
 
