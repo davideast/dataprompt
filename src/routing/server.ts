@@ -24,7 +24,6 @@ function createRouteHandler({
 }) {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     let requestContext = toRequestContext(req);
-    console.log(req.url)
     const route = store.routes.single(expressRoute);
     if (!route) {
       throw new Error(`No route found for ${expressRoute}`);
