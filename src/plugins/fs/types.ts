@@ -30,7 +30,6 @@ export interface FileSystemPluginConfig {
 
 export type WriteOperationType = 'overwrite' | 'append' | 'create' | 'create-or-overwrite';
 
-// Internal Operation type used by execute
 export interface Operation {
   type: WriteOperationType;
   filePath: string;
@@ -38,14 +37,3 @@ export interface Operation {
   encoding: BufferEncoding | 'buffer' | undefined;
   format: 'text' | 'json' | 'binary' | undefined;
 }
-
-
-// type WriteOperation = 'overwrite' | 'append' | 'create' | 'create-or-overwrite';
-
-// interface FileSystemWriteOperation {
-//   type: WriteOperation;
-//   filePath: string;
-//   source: string;
-//   encoding: BufferEncoding | 'buffer' | undefined;
-//   format: 'text' | 'json' | 'auto' | 'binary' | undefined;
-// }

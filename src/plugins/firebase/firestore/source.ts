@@ -1,4 +1,4 @@
-import { RequestContext } from '../../core/interfaces.js';
+import { RequestContext } from '../../../core/interfaces.js';
 import { Firestore } from 'firebase-admin/firestore';
 import { 
   FirestoreSourceConfig, 
