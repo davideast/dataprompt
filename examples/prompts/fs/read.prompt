@@ -1,0 +1,25 @@
+---
+model: googleai/gemini-2.0-flash-exp
+data.prompt:
+  sources:
+    fs:
+      # located in sandbox (normally ./tmp/dataprompt-sandbox)
+      # make sure to create this file before running
+      message: story.txt 
+  result:
+    fs:
+      append:
+        - [story.txt, output]
+      overwrite:
+        path: full_copy.txt
+        format: json
+        source: output
+output:
+  schema: Message
+---
+
+Tell me something about this message below. What should we do next? What is your recommendation? Speak like William Shakespeare.
+
+<message>
+{{json message}}
+</message>

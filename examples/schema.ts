@@ -8,13 +8,14 @@ export const InvoiceSchema = z.object({
   processed: z.string().describe('ISO Date String')
 });
 
-export const Message = z.string();
+export const Message = z.object({
+  message: z.string().describe('A message')
+});
 
 export const SharkFact = z.object({
   fact: z.string(),
   dateString: z.string().describe('ISO Date String')
 })
-
 
 export const StorySchema = z.object({
   id: z.number(),

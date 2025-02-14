@@ -1,4 +1,4 @@
-import { RequestContext } from '../core/interfaces.js';
+import { DatapromptFile, RequestContext } from '../core/interfaces.js';
 import { PluginRegistry } from '../core/registry.js';
 import { RequestLogger } from '../utils/logging.js';
 import Handlebars from 'handlebars';
@@ -13,8 +13,9 @@ export async function fetchPromptSources(params: {
   request: RequestContext;
   registry: PluginRegistry;
   logger?: RequestLogger;
+  file: DatapromptFile;
 }): Promise<Record<string, any>> {
-  const { sources, request, logger, registry } = params;
+  const { sources, request, logger, registry, file } = params;
   const promptSources: Record<string, any> = {};
 
   for (const [sourceName, sourceConfig] of Object.entries(sources)) {
@@ -35,6 +36,7 @@ export async function fetchPromptSources(params: {
       const data = await source.fetchData({
         request,
         config: processedConfig,
+        file,
       });
 
       promptSources[propertyName] = data;
@@ -59,8 +61,9 @@ export async function executeResultActions(params: {
   result: { output: any };
   registry: PluginRegistry;
   logger?: RequestLogger;
+  file: DatapromptFile,
 }) {
-  const { resultActions, request, promptSources, result, logger, registry } = params;
+  const { resultActions, request, promptSources, result, logger, registry, file } = params;
 
   for (const [actionName, actionConfig] of Object.entries(resultActions)) {
     const action = registry.getAction(actionName);
@@ -79,6 +82,7 @@ export async function executeResultActions(params: {
       request,
       config: processedConfig,
       promptSources: { ...promptSources, output: result.output },
+      file,
     });
 
     logger?.actionEvent(actionName, processedConfig, result.output);

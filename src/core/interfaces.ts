@@ -36,17 +36,19 @@ export interface DatapromptPlugin {
 export type FetchDataParams = {
   request: RequestContext;
   config: any;
+  file: DatapromptFile;
 }
 
 export interface DataSourceProvider {
   name: string;
-  fetchData(params: FetchDataParams): Promise<Record<string, any>>;
+  fetchData(params: FetchDataParams): Promise<Record<string, any> | string>;
 }
 
 export type ExecuteParams = {
   request: RequestContext;
   config: any;
   promptSources: Record<string, any>;
+  file: DatapromptFile;
 }
 
 export interface DataActionProvider {
@@ -87,4 +89,5 @@ export interface DatapromptFile {
   path: string;
   content: string;
   nextRoute: string;
+  absolutePath?: string;
 }

@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { DatapromptFile } from '../core/interfaces.js';
 
 export function filePathToExpressParams({ filePath, basePath }: { filePath: string; basePath: string }): string {
@@ -14,18 +14,20 @@ export async function readFilesRecursively(directoryPath: string): Promise<Datap
   const files: DatapromptFile[] = [];
 
   for (const entry of entries) {
-    const fullPath = join(directoryPath, entry.name);
+    const promptPath = join(directoryPath, entry.name);
+    
     if (entry.isDirectory()) {
-      files.push(...(await readFilesRecursively(fullPath)));
+      files.push(...(await readFilesRecursively(promptPath)));
     } else if (entry.isFile() && entry.name.endsWith('.prompt')) {
       try {
-        const content = await fs.readFile(fullPath, {
+        const absolutePath = resolve(directoryPath, entry.name)
+        const content = await fs.readFile(promptPath, {
           encoding: 'utf-8',
-          // TODO(davideast): is 'r+' really needed? 'r' probably works best
-          flag: 'r+' 
+          // TODO(davideast): remember that 'r+' works well in HMR
+          flag: 'r' 
         });
-        const nextRoute = extractNextRoute(fullPath);
-        files.push({ path: fullPath, content, nextRoute });
+        const nextRoute = extractNextRoute(promptPath);
+        files.push({ path: promptPath, content, nextRoute, absolutePath });
       } catch (error) {
         // TODO(davideast): consider centralized error handling
         throw error;
