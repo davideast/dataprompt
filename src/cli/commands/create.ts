@@ -26,7 +26,7 @@ const store = await dataprompt()
 export const flowExports = store.flows.list().reduce((acc, flow, index) => {
   acc[flow.name || \`flow$\{index}\`] = flow;
   return acc;
-}, {});
+}, {} as any);
 `;
 
     await fs.writeFile(path.join(projectPath, '_dev-flows.ts'), devFlowsContent);
@@ -39,17 +39,17 @@ export const SharkFact = z.object({
   dateString: z.string().describe('ISO Date String')
 })
     
-export const HackerNewsItemSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  points: z.number().optional(),
-  user: z.string().optional(),
-  time: z.number().optional(),
-  time_ago: z.string().optional(),
-  comments_count: z.number().optional(),
-  type: z.string(),
-  url: z.string().optional(),
-  domain: z.string().optional(),
+export const HackerNewsAnalysisSchema = z.object({
+  tldr: z.string().describe('The no-nonsense summary of the the main items of hacker news'),
+  trends: z.array(z.string()).describe('Interesting trends in the topics seen on hacker news'),
+  topics: z.array(z.string()).describe('The main topics being discussed across news items'),
+  topThree: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    domain: z.string(),
+    points: z.number(),
+    date: z.string().describe('ISO Date String')
+  }).describe('Hacker News Item'))
 });
 `;
     await fs.writeFile(path.join(projectPath, "schema.ts"), schemaContent);
@@ -66,7 +66,7 @@ data.prompt:
         - ["/hackernews-items", news] 
         - ["/analysis", output]
 output:
-  schema: HackerNewsItemSchema
+  schema: HackerNewsAnalysisSchema
 ---
 You are an expert at summarizing Hacker News articles.  Given the following data, provide a concise summary of each article.
 
