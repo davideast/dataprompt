@@ -8,7 +8,6 @@
     GOOGLE_APPLICATION_CREDENTIALS="/path/to/sa.json";
    };
   idx = {
-    internal.templates-cli.enable = true;
     extensions = [];
     previews = {
       enable = true;
