@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { Readable } from 'node:stream';
 import os from 'os';
 
-export interface FileReadConfig {
+export interface FileSystemReadConfig {
   path: string;
   format?: 'text' | 'json' | 'auto' | 'binary';
   encoding?: BufferEncoding | 'buffer';
@@ -19,7 +19,7 @@ export interface FileReadConfig {
   end?: number;
 }
 
-export interface FileWriteConfig {
+export interface FileSystemWriteConfig {
   path: string;
   mode?: 'overwrite' | 'append' | 'create';
   encoding?: BufferEncoding | 'buffer';
@@ -27,16 +27,47 @@ export interface FileWriteConfig {
   source?: string;
 }
 
-export interface FsPluginConfig {
+export interface FileSystemPluginConfig {
   sandboxPath?: string;
 }
 
-export function fsPlugin(pluginConfig: FsPluginConfig = {}): DatapromptPlugin {
+export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptPlugin {
   const name = 'fs';
+  // Determine the sandbox path
+  const sandboxPath = createSandboxDirectory(pluginConfig);
+  return {
+    name,
+    createDataSource(): DataSourceProvider {
+      return {
+        name,
+        async fetchData(params: {
+          request: RequestContext;
+          config: string | FileSystemReadConfig;
+          file: DatapromptFile;
+        }): Promise<Record<string, any> | string> {
+          return fetchData(params, sandboxPath);
+        },
+      };
+    },
+    createDataAction(): DataActionProvider {
+      return {
+        name,
+        async execute(params: {
+          request: RequestContext;
+          config: FileSystemWriteConfig;
+          promptSources: Record<string, any>;
+        }): Promise<void> {
+          throw new Error('File write not implemented yet.');
+        },
+      };
+    },
+  };
+}
+
+function createSandboxDirectory(pluginConfig: FileSystemPluginConfig = {}) {
   // Determine the sandbox path:
   const defaultSandboxPath = path.join(os.tmpdir(), 'dataprompt-sandbox');
   const sandboxPath = path.resolve(pluginConfig.sandboxPath || defaultSandboxPath);
-  console.log({ defaultSandboxPath })
   // Create the sandbox directory if it doesn't exist.
   if (!fs.existsSync(sandboxPath)) {
     try {
@@ -47,33 +78,7 @@ export function fsPlugin(pluginConfig: FsPluginConfig = {}): DatapromptPlugin {
     }
   }
 
-  return {
-    name,
-    createDataSource(): DataSourceProvider {
-      return {
-        name,
-        async fetchData(params: {
-          request: RequestContext;
-          config: string | FileReadConfig;
-          file: DatapromptFile;
-        }): Promise<Record<string, any> | string> { 
-          return fetchData(params, sandboxPath);
-        },
-      };
-    },
-    createDataAction(): DataActionProvider {
-      return {
-        name,
-        async execute(params: {
-          request: RequestContext;
-          config: FileWriteConfig;
-          promptSources: Record<string, any>;
-        }): Promise<void> {
-          throw new Error('File write not implemented yet.');
-        },
-      };
-    },
-  };
+  return sandboxPath;
 }
 
 // Only allows access within the sandbox.
@@ -81,7 +86,7 @@ function resolveFilePath(filePath: string, sandboxPath: string): string {
   // Resolve the requested file path relative to the sandbox directory.
   const resolvedPath = path.resolve(sandboxPath, filePath);
 
-  // Ensure the resolved path is *within* the sandbox.
+  // Ensure the resolved path is within the sandbox.
   if (!resolvedPath.startsWith(sandboxPath)) {
     throw new Error(
       `File access outside of sandbox directory: ${filePath}. Resolved Path: ${resolvedPath}`
@@ -92,47 +97,24 @@ function resolveFilePath(filePath: string, sandboxPath: string): string {
 
 async function fetchData(params: {
   request: RequestContext;
-  config: string | FileReadConfig;
+  config: string | FileSystemReadConfig;
   file: DatapromptFile;
-}, sandboxPath: string): Promise<Record<string, any> | string> {
+}, sandboxPath: string): Promise<Record<string, any> | Buffer | string> {
   const { config, file } = params;
-  const fsConfig: FileReadConfig =
+  const fsConfig: FileSystemReadConfig =
     typeof config === 'string' ? { path: config } : config;
 
   if (!file?.absolutePath) {
     throw new Error("Prompt file path is required for file operations.");
   }
 
+  // Call resolveFilePath with ONLY the sandboxPath
   const filePath = resolveFilePath(fsConfig.path, sandboxPath);
   const format = fsConfig.format || 'auto';
   const encoding = fsConfig.encoding || (format === 'binary' ? 'buffer' : 'utf8');
 
   try {
-    if (format === 'binary') {
-      return streamFileAsBinary(filePath, fsConfig);
-    }
-
-    const fileStream = fs.createReadStream(filePath, {
-      encoding: encoding === 'buffer' ? undefined : (encoding as BufferEncoding),
-      start: fsConfig.start,
-      end: fsConfig.end,
-    });
-
-    if (format === 'json') {
-      return streamFileAsJSON(fileStream, encoding);
-    } else if (format === 'auto') {
-      // Attempt to auto-detect the format.
-      const fileExtension = path.extname(filePath).toLowerCase();
-      if (fileExtension === '.json') {
-        return streamFileAsJSON(fileStream, encoding);
-      } else {
-        // Default to text if auto-detection fails.
-        return streamFileAsText(fileStream, encoding);
-      }
-    } else { 
-      // format === 'text' or any other non-binary format
-      return streamFileAsText(fileStream, encoding);
-    }
+    return await readFileContent(filePath, format, encoding, fsConfig);
   } catch (error: any) {
     if (error.code === 'ENOENT') {
       throw new Error(`File not found: ${filePath}`);
@@ -141,6 +123,40 @@ async function fetchData(params: {
     } else {
       throw new Error(`Error reading file ${filePath}: ${error.message}`);
     }
+  }
+}
+
+async function readFileContent(
+  filePath: string,
+  format: 'text' | 'json' | 'csv' | 'auto' | 'binary',
+  encoding: BufferEncoding | 'buffer',
+  fsConfig: FileSystemReadConfig,
+): Promise<Record<string, any> | Buffer | string> {
+  if (format === 'binary') {
+    return streamFileAsBinary(filePath, fsConfig);
+  }
+
+  const fileStream = fs.createReadStream(filePath, {
+    encoding: encoding === 'buffer' ? undefined : (encoding as BufferEncoding),
+    start: fsConfig.start,
+    end: fsConfig.end,
+  });
+
+  switch (format) {
+    case 'json':
+      return streamFileAsJSON(fileStream, encoding);
+    case 'auto':
+      const fileExtension = path.extname(filePath).toLowerCase();
+      if (fileExtension === '.json') {
+        return streamFileAsJSON(fileStream, encoding);
+      } else {
+        return streamFileAsText(fileStream, encoding);
+      }
+    case 'text':
+      return streamFileAsText(fileStream, encoding);
+    default:
+      // Handle 'text' and any unknown formats as text
+      return streamFileAsText(fileStream, encoding);
   }
 }
 
@@ -174,7 +190,7 @@ async function streamFileAsJSON(
   }
 }
 
-async function streamFileAsBinary(filePath: string, fileConfig: FileReadConfig): Promise<Record<string, any>> {
+async function streamFileAsBinary(filePath: string, fileConfig: FileSystemReadConfig): Promise<Record<string, any>> {
   const fileStream = fs.createReadStream(filePath, { start: fileConfig.start, end: fileConfig.end });
   const chunks: Buffer[] = [];
 
