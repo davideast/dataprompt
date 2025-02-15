@@ -5,11 +5,11 @@
   ];
   bootstrap = ''
     mkdir "$out"
-    cp ${./dev.nix} "$out/dev.nix"
+    cp ${./dev.nix} "$out/.idx/dev.nix"
     npm init -y
     npx dataprompt create "$out"
     # Set some permissions
     chmod -R +w "$out"
-    git init
+    git init "$out"
   '';
 }

@@ -38,3 +38,5 @@ set-env.sh
 
 *.tgz
 context.txt
+/gen
+
