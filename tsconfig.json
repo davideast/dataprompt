@@ -18,8 +18,7 @@
     "src/index.ts",
     "src/cli/index.ts",
     "src/plugins/**/*.ts",
-    "src/context/index.ts",
-    "src/test/schema.ts",
+    "src/context/index.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

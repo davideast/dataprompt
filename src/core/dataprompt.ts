@@ -1,10 +1,10 @@
-import type { Genkit } from 'genkit';
+import { Genkit } from 'genkit';
 import { RequestContext } from './interfaces.js';
 import { PluginRegistry, createPluginRegistry } from './registry.js';
 import { createRouteCatalog } from '../routing/index.js';
 import { createApiServer } from '../routing/server.js';
 import { DatapromptConfig, resolveConfig } from './config.js';
-import { registerUserSchemas } from '../utils/schema-loader.js';
+import { SchemaMap, registerUserSchemas } from '../utils/schema-loader.js';
 import { RouteManager, createRouteManager } from '../routing/route-manager.js';
 import { FlowManager, createFlowManager } from '../routing/flow-manager.js';
 import { TaskManager, createTaskManager } from '../routing/task-manager.js';
@@ -18,6 +18,7 @@ export interface DatapromptStore {
   flows: FlowManager;
   tasks: TaskManager;
   ai: Genkit;
+  userSchemas: SchemaMap;
 }
 
 export async function dataprompt(
@@ -25,19 +26,20 @@ export async function dataprompt(
 ): Promise<DatapromptStore> {
   const resolvedConfig = await resolveConfig(config);
 
-  const ai = resolvedConfig.genkit!;
+  const ai = resolvedConfig.genkit;
   const registry = createPluginRegistry(resolvedConfig.plugins);
-  await registerUserSchemas(ai, resolvedConfig.schemaFile);
+  const userSchemas = await registerUserSchemas(resolvedConfig);
   const catalog = await createRouteCatalog({
     promptDir: resolvedConfig.promptsDir,
     ai,
     registry,
+    userSchemas
   });
   const routeManager = createRouteManager(catalog);
   const flowManager = createFlowManager(routeManager);
   const taskManager = createTaskManager(catalog.tasks);
 
-  const store: DatapromptStore = {
+  return {
     async generate<Output>(url: string | Request | RequestContext) {
       try {
         const { route, request } = await routeManager.getRequest(url);
@@ -54,8 +56,8 @@ export async function dataprompt(
     tasks: taskManager,
     registry,
     ai,
+    userSchemas,
   };
-  return store;
 }
 
 export async function createPromptServer(options: {

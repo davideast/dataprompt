@@ -2,15 +2,10 @@ import { z } from 'zod';
 import { genkit, Genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { dateFormat } from '../utils/helpers/date-format.js';
-import * as fs from 'fs';
 import * as path from 'path';
-import { promisify } from 'util';
 import { pathToFileURL } from 'url';
 import { findUp } from 'find-up';
 import { DatapromptPlugin } from './interfaces.js';
-import * as NodeFS from 'node:fs';
-
-const fileExistsAsync = promisify(fs.exists);
 
 const SecretsSchema = z.object({
   GOOGLEAI_API_KEY: z.string().min(1),
@@ -25,13 +20,13 @@ export type DatapromptConfig = {
   promptsDir?: string;
   schemaFile?: string;
   secrets?: DatapromptSecrets;
-  rootDir: string;
+  rootDir?: string;
 };
 
 let aiInstance: Genkit | null = null;
 let _secrets: DatapromptSecrets | null = null;
 
-export function loadSecrets(secrets: DatapromptSecrets): DatapromptSecrets {
+function validateSecrets(secrets: DatapromptSecrets): DatapromptSecrets {
   try {
     const parsedSecrets = SecretsSchema.parse(secrets);
     _secrets = parsedSecrets;
@@ -63,36 +58,53 @@ async function loadConfigFile(configPath: string): Promise<DatapromptConfig> {
 
 export async function resolveConfig(
   providedConfig?: Partial<DatapromptConfig>
-): Promise<Omit<Required<DatapromptConfig>, 'secrets'>> {
-  let userConfig: DatapromptConfig | null = null;
-  const configFilenames = ['dataprompt.config.ts', 'dataprompt.config.js'];
-  let rootDir: string | undefined;
+): Promise<Required<DatapromptConfig>> {
+  const userConfig = await findDatapromptUserConfig();
+  const rootDir = userConfig?.rootDir ?? 
+    providedConfig?.rootDir ??
+    await findProjectRootByPackageJson();
 
-  const packageJsonPath = await findUp('package.json', { cwd: process.cwd() });
-  if (packageJsonPath) {
-    rootDir = path.dirname(packageJsonPath);
-  } else {
-    throw new Error('Could not find package.json in the current directory or any parent directories.')
-  }
-
-  if (rootDir) {
-    for (const filename of configFilenames) {
-      const configPath = path.join(rootDir, filename);
-      if (await fileExistsAsync(configPath)) {
-        userConfig = await loadConfigFile(configPath);
-        if (userConfig) break;
-      }
-    }
-  }
-
-  const defaultConfig: Required<Omit<DatapromptConfig, 'genkit' | 'secrets' | 'rootDir'>> = {
+  const defaultConfig: Required<DatapromptConfig> = {
+    // TODO(davideast): move default plugins registration from registry here
     plugins: [],
+    // dir name is resolved to root of package.json
     promptsDir: 'prompts',
-    schemaFile: 'schema.js'
+    // schema file is resolved to root of package.json
+    // but the built .js not .ts version.
+    schemaFile: 'schema.js',
+    genkit: getGenkit(),
+    secrets: process.env as DatapromptSecrets,
+    // root is decided by user config or package.json
+    rootDir,
   };
 
-  const secretConfig = userConfig?.secrets ?? providedConfig?.secrets ?? process.env as any;
-  const secrets = loadSecrets(secretConfig);
+  const genkit = userConfig?.genkit ?? 
+    providedConfig?.genkit ?? 
+    defaultConfig.genkit;
+
+  const schemaFile = resolveSchemaFile({ 
+    rootDir, 
+    userConfig,
+    providedConfig,
+    defaultConfig,
+  });
+
+  const secrets = resolveSecrets({ 
+    userConfig, 
+    providedConfig,
+    defaultConfig, 
+  });
+
+  const promptsDir = resolvePromptsDir({
+    rootDir,
+    userConfig,
+    providedConfig,
+    defaultConfig,
+  });
+
+  const plugins = userConfig?.plugins ??
+    providedConfig?.plugins ??
+    defaultConfig.plugins;
 
   /*
    * Load order precedence:
@@ -101,29 +113,93 @@ export async function resolveConfig(
    * 3. `defaultConfig`: Built-in defaults.
    * 4. `getGenkit()`: Fallback for `genkit` only (if not in `userConfig` or `providedConfig`).
    */
-  const mergedConfig: Required<DatapromptConfig> = {
-    genkit: userConfig?.genkit ?? providedConfig?.genkit ?? getGenkit(),
-    plugins: userConfig?.plugins ?? providedConfig?.plugins ?? defaultConfig.plugins,
-    promptsDir: userConfig?.promptsDir ?? providedConfig?.promptsDir ?? defaultConfig.promptsDir,
-    schemaFile: userConfig?.schemaFile ?? providedConfig?.schemaFile ?? defaultConfig.schemaFile,
+  return {
+    schemaFile,
+    genkit,
+    plugins,
+    promptsDir,
     secrets,
     rootDir,
   };
+}
 
-  return mergedConfig;
+async function findProjectRootByPackageJson() {
+  const packageJsonPath = await findUp('package.json', { cwd: process.cwd() });
+  if (packageJsonPath) {
+    return path.dirname(packageJsonPath);
+  } else {
+    throw new Error('Could not find package.json in the current directory or any parent directories.');
+  }
+}
+
+async function findDatapromptUserConfig() {
+  const userConfigPath = await findUp('dataprompt.config.js', { cwd: process.cwd() });
+  if (userConfigPath != null) {
+    return await loadConfigFile(userConfigPath);
+  }
+}
+
+function resolveSecrets(params: {
+  userConfig?: Partial<DatapromptConfig>,
+  providedConfig?: Partial<DatapromptConfig>,
+  defaultConfig: Required<DatapromptConfig>,
+}) {
+  const secretConfig = params.userConfig?.secrets ??
+    params.providedConfig?.secrets ??
+    params.defaultConfig.secrets;
+  return validateSecrets(secretConfig);
+}
+
+function resolveSchemaFile(params: {
+  rootDir: string;
+  userConfig?: Partial<DatapromptConfig>,
+  providedConfig?: Partial<DatapromptConfig>,
+  defaultConfig: Required<DatapromptConfig>,
+}): string {
+  const schemaFile = params.userConfig?.schemaFile ??
+    params.providedConfig?.schemaFile ??
+    params.defaultConfig.schemaFile;
+  if (!schemaFile) {
+    throw new Error("Schema file path is missing in configuration.");
+  }
+  try {
+    return path.resolve(params.rootDir, schemaFile);
+  } catch (error) {
+    console.error("Error resolving schema path:", error);
+    throw error;
+  }
+}
+
+function resolvePromptsDir(params: {
+  rootDir: string;
+  userConfig?: Partial<DatapromptConfig>,
+  providedConfig?: Partial<DatapromptConfig>,
+  defaultConfig: Required<DatapromptConfig>,
+}): string {
+  const promptsDir = params.userConfig?.promptsDir ??
+    params.providedConfig?.promptsDir ??
+    params.defaultConfig.promptsDir;
+  if (!promptsDir) {
+    throw new Error("prompts directory is missing in configuration.");
+  }
+  try {
+    return path.resolve(params.rootDir, promptsDir);
+  } catch (error) {
+    console.error("Error resolving prompts directory:", error);
+    throw error;
+  }
 }
 
 function getSecrets(secrets?: DatapromptSecrets) {
   if (!_secrets) {
-    _secrets = loadSecrets(secrets || process.env as DatapromptSecrets);
+    _secrets = validateSecrets(secrets || process.env as DatapromptSecrets);
   }
   return _secrets;
 }
 
-export function getGenkit({ provider, secrets }: { 
-  provider?: string; 
-  secrets?: DatapromptSecrets 
-} = { provider: 'googleai' }) {
+export function getGenkit({ provider }: Partial<{
+  provider: string;
+}> = { provider: 'googleai' }) {
   if (!aiInstance) {
     const { GOOGLEAI_API_KEY: apiKey } = getSecrets();
     if (!apiKey) {

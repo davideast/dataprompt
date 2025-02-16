@@ -1,11 +1,10 @@
 import { Genkit } from 'genkit';
-import { join } from 'node:path';
 import { ScheduledTask } from 'node-cron';
 import { DatapromptRoute } from './server.js';
 import { PluginRegistry } from '../core/registry.js';
 import { createRoute } from './route-builder.js';
 import { createFileMap } from './file-system.js';
-import { loadUserSchemas } from '../utils/schema-loader.js';
+import { SchemaMap } from '../utils/schema-loader.js';
 import { events } from '../core/events.js';
 import { randomUUID } from 'node:crypto';
 
@@ -41,14 +40,13 @@ export async function createRouteCatalog(params: {
   ai: Genkit;
   promptDir: string;
   registry: PluginRegistry;
-  rootDir: string;
+  userSchemas: SchemaMap,
 }): Promise<RouteCatalog> {
-  const { ai, promptDir: basePath, registry, rootDir } = params;
-  const userSchemas = await loadUserSchemas(rootDir);
+  const { ai, promptDir, registry, userSchemas } = params;
   const express: Map<string, DatapromptRoute> = new Map();
   const next: Map<string, DatapromptRoute> = new Map();
   const tasks: Map<string, ScheduledTask> = new Map();
-  const fileMap = await createFileMap(basePath);
+  const fileMap = await createFileMap(promptDir);
 
   for (const [expressRoute, file] of fileMap.entries()) {
     try {

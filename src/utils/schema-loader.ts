@@ -4,26 +4,30 @@ import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import { Genkit } from 'genkit'
 
-export interface SchemaMap {
+export interface SchemaExports {
   [key: string]: z.ZodType<any, any, any>;
 }
+
+export type SchemaMap = Map<string, z.ZodType>;
 
 async function loadSchemaFile(filePath: string) {
   const moduleUrl = pathToFileURL(filePath).toString();
   return import(moduleUrl);
 }
 
-export async function loadUserSchemas(
-  projectRoot: string,
-  schemaFile = 'schema.js'
-): Promise<SchemaMap> {
-
+async function loadUserSchemas(params: {
+  rootDir: string,
+  schemaFile: string,
+}): Promise<SchemaExports> {
+  const { rootDir, schemaFile } = params;
   let schemaPath = schemaFile;
 
+  // only construct the path if it's not absolute
   if (!isAbsolute(schemaFile)) {
-    schemaPath = join(projectRoot, schemaFile);
-    console.log({ schemaPath: schemaPath })
+    schemaPath = join(rootDir, schemaFile);
   }
+  
+  console.log({ schemaPath: schemaPath })
 
   // Try loading the schema file, and if it fails, try the fallback.
   try {
@@ -32,7 +36,7 @@ export async function loadUserSchemas(
       return extractSchemas(schemaModule);
     } else {
       // Only try the fallback if the initial path doesn't exist.
-      const fallbackSchemaPath = join(projectRoot, 'schema.js');
+      const fallbackSchemaPath = join(rootDir, 'schema.js');
       if (schemaPath !== fallbackSchemaPath && existsSync(fallbackSchemaPath)) {
         const schemaModule = await loadSchemaFile(fallbackSchemaPath);
         return extractSchemas(schemaModule);
@@ -46,8 +50,8 @@ export async function loadUserSchemas(
   }
 }
 
-function extractSchemas(schemaModule: any): SchemaMap {
-  const schemaMap: SchemaMap = {};
+function extractSchemas(schemaModule: any): SchemaExports {
+  const schemaMap: SchemaExports = {};
 
   for (const key in schemaModule) {
     if (Object.hasOwn(schemaModule, key)) {
@@ -61,15 +65,25 @@ function extractSchemas(schemaModule: any): SchemaMap {
   return schemaMap;
 }
 
-export async function registerUserSchemas(ai: Genkit, schemaFile: string) {
-  const schemas = await loadUserSchemas(schemaFile);
+// TODO(davideast): Consider moving this into a manager to allow
+// for dynamically loading schemas at runtime. But you actually have 
+// to understand how Genkit manages schemas.
+export async function registerUserSchemas(params: { 
+  genkit: Genkit, 
+  schemaFile: string,
+  rootDir: string,
+}): Promise<SchemaMap> {
+  const { genkit } = params;
+  const schemas = await loadUserSchemas(params);
+  const schemaMap = new Map<string, z.ZodType>()
   for (const [name, schema] of Object.entries(schemas)) {
-    if(ai.registry.lookupSchema(name) == null) {
+    if(genkit.registry.lookupSchema(name) == null) {
       console.log(`Registering schema ${name}`);
-      ai.defineSchema(name, schema);
+      genkit.defineSchema(name, schema);
+      schemaMap.set(name, schema);
     } else {
       console.warn(`Schema ${name} already registered`);
     }
   }
-  return schemas;
+  return schemaMap;
 }

@@ -1,12 +1,19 @@
 import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { DatapromptConfig, createPromptServer } from '../../src/index.js'
 import path from 'path';
+import { fileURLToPath } from 'url';
 import request from 'supertest';
 import { DatapromptPlugin } from '../../src/core/interfaces.js';
 import type { Server } from 'http'
 import * as fs from 'node:fs';
+import { findUpSync, findUp } from 'find-up'
 
 const MODEL = 'googleai/gemini-2.0-flash-exp'
+
+// Set the rootDir to tests using the closest schema.js file above
+// const currentFilePath = fileURLToPath(import.meta.url);
+// const schemaFile = await findUp('schema.js', { cwd: path.dirname(currentFilePath) });
+// const testRootDir = path.dirname(schemaFile!);
 
 const testPromptContent = (
   options: {outputSchema: string} = {
@@ -23,10 +30,18 @@ This is a test prompt. Provide some random data and an explanation of this data.
 describe('Dataprompt Server Integration Tests', () => {
   let httpServer: Server;
   let tempDir: string;
+  let testRootDir: string;
 
   beforeAll(() => {
+    // Set the rootDir to main tests root
+    const currentFilePath = fileURLToPath(import.meta.url);
+    testRootDir = findUpSync('tests', { 
+      cwd: path.dirname(currentFilePath),
+      type: 'directory'
+    })!;
+
     // Create a temporary directory for prompts
-    tempDir = '/home/user/dataprompt/tests/dataprompt-test';
+    tempDir = fs.mkdtempSync(path.resolve(testRootDir, 'dataprompt-test-'));
   });
 
   beforeEach(async () => {
@@ -54,7 +69,9 @@ describe('Dataprompt Server Integration Tests', () => {
   });
 
   const setupStoreAndServer = async (
-    config: DatapromptConfig = {}, 
+    config: DatapromptConfig = {
+      rootDir: testRootDir
+    }, 
     promptFiles: { [key: string]: string } = {}
   ) => {
     // Write prompt files to filesystem
@@ -69,8 +86,7 @@ describe('Dataprompt Server Integration Tests', () => {
     const { store, server } = await createPromptServer({
       config: {
         ...config,
-        promptsDir: config.promptsDir || `${tempDir}/prompts`,
-        schemaFile: '/home/user/dataprompt/tests/schema.js',
+        promptsDir: config.promptsDir || `${tempDir}/prompts`
       }
     });
     return { store, server };
