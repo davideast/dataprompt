@@ -39,12 +39,12 @@ export function createTask(
 
 export async function createRouteCatalog(params: {
   ai: Genkit;
-  basePath: string;
+  promptDir: string;
   registry: PluginRegistry;
+  rootDir: string;
 }): Promise<RouteCatalog> {
-  const { ai, basePath, registry } = params;
-  const projectRoot = join(basePath, '..');
-  const userSchemas = await loadUserSchemas(projectRoot);
+  const { ai, promptDir: basePath, registry, rootDir } = params;
+  const userSchemas = await loadUserSchemas(rootDir);
   const express: Map<string, DatapromptRoute> = new Map();
   const next: Map<string, DatapromptRoute> = new Map();
   const tasks: Map<string, ScheduledTask> = new Map();
@@ -83,7 +83,8 @@ export async function createRouteCatalog(params: {
         next.set(route.nextRoute, route);
       }
     } catch (error) {
-      throw new Error(`Error processing prompt file ${file.path}: ${error}`);
+      throw error;
+      // throw new Error(`Error processing prompt file ${file.path}: ${error}`);
     }
   }
   return { express, next, tasks };

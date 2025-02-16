@@ -1,0 +1,39 @@
+---
+model: googleai/gemini-2.0-flash-exp
+data.prompt:
+  sources:
+    fs:
+      integration_code:
+        path: src/tests/integration/dataprompt_server_test.ts
+        format: text
+      background: 
+        path: system_prompts/background.md
+        format: text
+      plan: 
+        path: system_prompts/plan.explanation.md
+        format: text
+      important_files:
+        path: system_prompts/important-files.md
+        format: text
+  result:
+    fs:
+      overwrite:
+        - [src/tests/index.ts, output.code]
+        - [src/tests/index.explanation.md, output.explanation]
+      append:
+        - [src/tests/index.explanation.md, output.newPackages]
+        - [src/tests/index.explanation.md, output.npmInstallCommand]
+        - [src/tests/index.explanation.md, output.files]
+        
+output:
+  schema: CodeSchema
+---
+
+{{background}}
+
+## Intent
+Create a vite test runner for the tests in the dataprompt library that can be invoked with the npm test command.
+
+File: /src/tests/integration/dataprompt_server_test.ts
+{{integration_code}}
+

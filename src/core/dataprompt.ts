@@ -3,7 +3,7 @@ import { RequestContext } from './interfaces.js';
 import { PluginRegistry, createPluginRegistry } from './registry.js';
 import { createRouteCatalog } from '../routing/index.js';
 import { createApiServer } from '../routing/server.js';
-import { loadKeys, DatapromptConfig, resolveConfig } from './config.js';
+import { DatapromptConfig, resolveConfig } from './config.js';
 import { registerUserSchemas } from '../utils/schema-loader.js';
 import { RouteManager, createRouteManager } from '../routing/route-manager.js';
 import { FlowManager, createFlowManager } from '../routing/flow-manager.js';
@@ -23,15 +23,13 @@ export interface DatapromptStore {
 export async function dataprompt(
   config?: Partial<DatapromptConfig>
 ): Promise<DatapromptStore> {
-  await loadKeys();
   const resolvedConfig = await resolveConfig(config);
 
   const ai = resolvedConfig.genkit!;
   const registry = createPluginRegistry(resolvedConfig.plugins);
-
   await registerUserSchemas(ai, resolvedConfig.schemaFile);
   const catalog = await createRouteCatalog({
-    basePath: resolvedConfig.promptsDir,
+    promptDir: resolvedConfig.promptsDir,
     ai,
     registry,
   });

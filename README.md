@@ -1,6 +1,8 @@
 # dataprompt: prompts with data superpowers
 > Status: alpha
 
+[![npm version](https://badge.fury.io/js/dataprompt.svg)](https://badge.fury.io/js/dataprompt)
+
 <a href="https://idx.google.com/new?template=https%3A%2F%2Fgithub.com%2Fdavideast%2Fdataprompt%2Ftree%2Fmain%2Ftemplate">
   <picture>
     <source

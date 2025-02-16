@@ -4,135 +4,52 @@ data.prompt:
   sources:
     fs:
       context: context.txt
+      background: 
+        path: system_prompts/background.md
+        format: text
+      plan: 
+        path: system_prompts/plan.explanation.md
+        format: text
+      important_files:
+        path: system_prompts/important-files.md
+        format: text
   result:
     fs:
       overwrite:
-        - ["gen.txt", output.code]
-        - ["explanation.md", output.explanation]
+        - [src/tests/integration/dataprompt_server_test.ts, output.code]
+        - [src/tests/integration/dataprompt_server_test.md, output.explanation]
+      append:
+        - [src/tests/integration/dataprompt_server_test.md, output.newPackages]
+        - [src/tests/integration/dataprompt_server_test.md, output.npmInstallCommand]
 output:
   schema: CodeSchema
 ---
 
-## Persona
-You are a Node.js library expert. 
+{{background}}
 
-## Background Info
-dataprompt is a library extends Genkit and it's dotprompt file format to add data sources and actions (save the result of a prompt) into a `data.prompt` property in the YAML. This way an entire prompt can be self contained in one file. dataprompt also works as a file based routing system, like in Next.js, that allows the user to use the route parameters `/prompts/invoices/[id].prompt` to use these route parameters right in the prompt.
+{{important_files}}
 
 ## Intent
-I want to set up an intent based testing structure for dataprompt based on the structure in genkit's testing file structure. I will be using vitest as my testing tool. Read the code of my app which is formatted as an LLM friendly structure with comments noting the file paths and imports. Only provide me an ASCII tree format of your proposed testing file structure based on the intent of dataprompt's source code. 
+I want to set up a behavior based testing structure for dataprompt based on the structure in genkit's testing file structure. I will be using vitest as my testing tool. Read the code of my app which is formatted as an LLM friendly structure with comments noting the file paths and imports. I want to identify behaviors that are critical to be tested and especially integration testing. The previous implementation plan below is a proposed testing file structure for the `dataprompt` library, mirroring the behaviors of dataprompt's source code. Read the Action below and only focus on the single file and goals.
 
-## Corrections in your suggestions
-Your suggestions are very tied to the the file structure of the source code rather than its intent. I don't want to couple testing to its file structure. I want to identify behaviors that are critical to be tested and especially integration testing. Consider this a practice of finding the most important paths to test, favoring pragmatism in testing rather than an ideal thoroughness. Ask your self what behaviors MUST be tested across code changes and what behaviors could be added later. This is a practice in prioritization.
+Action: Generate vitest tests for the `tests/integration/dataprompt_server_test.ts` file based on the details on the plan. The goal is to test the behaviors of the `dataprompt` function (the public API) and the server creation process, ensuring that everything works correctly. You will implement the normal best practices of integration testing with servers as well as consider the following details:
+- Use a memory file system package (or something built into vitest) instead of communicating with the file system.
+- Ensure you are following proper set ups and tear downs between tests and test runs.
+- How a user can create a dataprompt store with the default options and a different mixture of options
+- How a user can create a dataprompt server from this store.
+- If the store contains the proper routes, flows, and tasks.
+- If the store properly contains default plugins
+- If the store can properly register a plugin.
+- If the store can take a different prompt directory
+- If the store can take a different schema file
+- Only use the getGenkt() helper to create an instance for now. This will be tested later.
+- If the server can receive a request and return the proper response.
+- If the .generate() function can take in only a URL path containing params in the path and invoke the correct flow with the correct inputs from the request URL and from the data inputs as well
+- Implement other integration best practices I have missed
+- Implement other critical and important use cases I have missed
 
-Look at your previous suggestions and improve back on my feedback.
-
-## Your previous suggestions
-
-Here's a proposed testing file structure for the `dataprompt` library, mirroring the intent and structure of the codebase, and incorporating key files and functionalities:
-
-```text
-tests/
-├── core
-│   ├── dataprompt_test.ts  # Tests for the public API in src/core/dataprompt.ts
-│   ├── registry_test.ts   # Tests for plugin registration in src/core/registry.ts
-│   ├── interfaces_test.ts # Test all core interfaces.
-│   └── config_test.ts     # Tests for config loading and resolving in src/core/config.ts
-├── routing
-│   ├── server_test.ts     # Tests for the Express server setup in src/routing/server.ts
-│   ├── index_test.ts      # Tests for RouteCatalog creation in src/routing/index.ts
-│   ├── flow_builder_test.ts # Comprehensive tests for the core logic in src/routing/flow-builder.ts
-│   ├── route_builder_test.ts # Tests for creating individual routes in src/routing/route-builder.ts
-│   ├── file_system_test.ts # Tests to ensure correct file reading and route extraction in src/routing/file-system.ts
-│   ├── route_manager_test.ts # Test suite for the route matching functionality in src/routing/route-manager.ts
-│   ├── flow_manager_test.ts # Test suite for flow manager functionality in src/routing/flow-manager.ts
-│   └── task_manager_test.ts # Test suite for the task manager functionality in src/routing/task-manager.ts
-├── utils
-│   ├── yaml_test.ts       # Tests for YAML parsing in src/utils/yaml.ts
-│   ├── schema_loader_test.ts # Tests for schema loading and registration in src/utils/schema-loader.ts
-│   ├── helpers
-│   │   └── request_test.ts   # Test the request conversion helper in src/utils/helpers/request.ts
-│   └── helpers_test.ts    # Tests related to date-format and templates in src/utils/helpers/
-├── plugins
-│   ├── firebase
-│   │   └── firestore_test.ts # Tests for the Firestore plugin in src/plugins/firebase/
-│   ├── scheduler
-│   │   └── scheduler_test.ts # Tests for the scheduler plugin in src/plugins/scheduler/
-│   └── fetch
-│   │   └── fetch_test.ts     # Tests for the fetch plugin in src/plugins/fetch/
-└── test_utils.ts        # Utility functions for setting up tests, mocking dependencies, etc.
-```
-
-**Explanation of Key Areas:**
-
-*   **Core:** Tests for the fundamental building blocks of `dataprompt`, including API, plugin registry, interfaces, and configuration.
-*   **Routing:** A comprehensive test suite for the routing mechanism, covering server setup, route catalog creation, dynamic flow building, route creation, file system interactions, and request/response handling.
-*   **Utils:** Tests for utility functions, especially YAML parsing and schema loading.
-*   **Plugins:**  Individual test suites for each plugin (Firebase, Scheduler, Fetch) to ensure proper functionality and integration.
-*   **test\_utils.ts**: Reusable testing utilities. This file would contain helper functions for setting up test environments (e.g., creating mock Genkit instances, registering plugins, creating temporary directories with `.prompt` files), mocking dependencies (e.g., mocking external API calls), and asserting common conditions.
-
-This structure ensures focused and maintainable tests, covering all critical aspects of the `dataprompt` library.
-
-## Genkit file structure
-
-```
-genkit/js/core/
-├── api
-├── src
-    ├── tracing
-    │   └── tracing.ts
-    ├── action.ts
-    ├── async.ts
-    ├── context.ts
-    ├── error.ts
-    ├── flow.ts
-    ├── index.ts
-    ├── logging.ts
-    ├── plugin.ts
-    ├── reflection.ts
-    ├── registry.ts
-    ├── schema.ts
-    ├── statusTypes.ts
-    ├── telemetryTypes.ts
-    └── utils.ts
-└── tests
-    ├── action_test.ts
-    ├── async_test.ts
-    ├── context_test.ts
-    ├── flow_test.ts
-    ├── registry_test.ts
-    ├── schema_test.ts
-    └── utils.ts
-├── .npmignore
-├── LICENSE
-├── README.md
-├── package.json
-├── tsconfig.json
-├── tsup.config.ts
-└── typedoc.json
-```
-
-## Important dataprompt files and code
-* src/core/dataprompt.ts
-    * Contains the public API the user and dataprompt CLI consumes
-* src/core/registry.ts
-    * Contains all the plugin registration for data sources, actions, and triggers
-* src/routing/server.ts
-    * Spins up the express server with routes provided from a dataprompt store instance
-* src/routing/flow-builder.ts
-    * Extracts data source config from the prompt, gets data source from registry, and fetches data from the plugin.
-    * Dynamically creates the dotprompt instance
-    * Generates response from LLM call.
-    * Creates the input and output schemas given the request
-    * Extracts action config from the promopt, gets action provider from registry, executes all actions, which can use data source variables and the output response.
-    * This file is incredibly important to test.
-* src/routing/index.ts
-    * Creates a "RouteCatalog" which is a Map of Next.js and Express routes mapped to a DatapromptRoute type as well as which paths are mapped to a Task. This file is also incredibly important to test.
-* src/utils/yaml.ts
-    * Extracts YAML config from data.prompt part of the dotprompt YAML. This will eventually be replaced by the dotprompt library itself but it's CRUCIAL there is a test that makes sure that given a prompt YAML or dotprompt file that a specific object extraction will come back.
-* src/utils/schema-loader.ts
-    * Loads and register's zod schema. 
+# Previous implementation plan
+{{plan}}
 
 ## Library Code in an LLM friendly format
-
 {{context}}

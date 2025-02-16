@@ -16,11 +16,11 @@ data.prompt:
   result:
     fs:
       overwrite:
-        - [tests/integration/dataprompt_server_test.ts", output.code]
-        - ["tests/dataprompt_server_test/dataprompt_server_test.md", output.explanation]
+        - [src/tests/integration/dataprompt_server_test.ts, output.code]
+        - [src/tests/integration/dataprompt_server_test.md, output.explanation]
       append:
-        - ["tests/dataprompt_server_test/dataprompt_server_test.md", output.newPackages]
-        - ["tests/dataprompt_server_test/dataprompt_server_test.md", output.npmInstallCommand]
+        - [src/tests/integration/dataprompt_server_test.md, output.newPackages]
+        - [src/tests/integration/dataprompt_server_test.md, output.npmInstallCommand]
 output:
   schema: CodeSchema
 ---
@@ -42,7 +42,7 @@ Action: Generate vitest tests for the `tests/integration/dataprompt_server_test.
 - If the store can properly register a plugin.
 - If the store can take a different prompt directory
 - If the store can take a different schema file
-- If the store can take a different genkit instance
+- Only use the getGenkt() helper to create an instance for now. This will be tested later.
 - If the server can receive a request and return the proper response.
 - If the .generate() function can take in only a URL path containing params in the path and invoke the correct flow with the correct inputs from the request URL and from the data inputs as well
 - Implement other integration best practices I have missed

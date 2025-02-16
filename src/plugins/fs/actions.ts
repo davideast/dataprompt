@@ -107,6 +107,7 @@ export async function execute(params: {
 
     try {
       switch (op.type) {
+        // TODO(davideast): Handle directory creation. Currently it will fail if it doesn't exist.
         case 'overwrite':
         case 'create-or-overwrite':
           await fs.writeFile(op.filePath, dataToWrite, { encoding: op.encoding === 'buffer' ? undefined : op.encoding });

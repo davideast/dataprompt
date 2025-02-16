@@ -1,8 +1,8 @@
 import { z } from 'genkit';
-import { join } from 'node:path';
+import { join, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
-import {Genkit} from 'genkit'
+import { Genkit } from 'genkit'
 
 export interface SchemaMap {
   [key: string]: z.ZodType<any, any, any>;
@@ -17,31 +17,33 @@ export async function loadUserSchemas(
   projectRoot: string,
   schemaFile = 'schema.js'
 ): Promise<SchemaMap> {
-  let schemas: SchemaMap = {};
 
-  const jsPath = join(projectRoot, 'dist', schemaFile);
-  if (existsSync(jsPath)) {
-    try {
-      const schemaModule = await loadSchemaFile(jsPath);
-      schemas = extractSchemas(schemaModule);
-    } catch (error) {
-      throw new Error(`Error loading compiled ${jsPath}: ${error}`);
-    }
-  } else {
-    // Fall back to root project schema file
-    const rootJsPath = join(projectRoot, schemaFile);
-    if (existsSync(rootJsPath)) {
-      try {
-        const schemaModule = await loadSchemaFile(rootJsPath);
-        schemas = extractSchemas(schemaModule);
-      } catch (error) {
-        throw new Error(`Error loading root ${rootJsPath}: ${error}`);
-      }
-    } else {
-      console.warn(`Root schema.js not found.`);
-    }
+  let schemaPath = schemaFile;
+
+  if (!isAbsolute(schemaFile)) {
+    schemaPath = join(projectRoot, schemaFile);
+    console.log({ schemaPath: schemaPath })
   }
-  return schemas;
+
+  // Try loading the schema file, and if it fails, try the fallback.
+  try {
+    if (existsSync(schemaPath)) {
+      const schemaModule = await loadSchemaFile(schemaPath);
+      return extractSchemas(schemaModule);
+    } else {
+      // Only try the fallback if the initial path doesn't exist.
+      const fallbackSchemaPath = join(projectRoot, 'schema.js');
+      if (schemaPath !== fallbackSchemaPath && existsSync(fallbackSchemaPath)) {
+        const schemaModule = await loadSchemaFile(fallbackSchemaPath);
+        return extractSchemas(schemaModule);
+      } else {
+        console.warn(`Schema file not found at either ${schemaPath} or ${fallbackSchemaPath}`);
+        return {};
+      }
+    }
+  } catch (error) {
+    throw new Error(`Error loading schema file: ${error}`);
+  }
 }
 
 function extractSchemas(schemaModule: any): SchemaMap {
@@ -59,9 +61,15 @@ function extractSchemas(schemaModule: any): SchemaMap {
   return schemaMap;
 }
 
-export async function registerUserSchemas(ai: Genkit, schemaFile = 'schema.js') {
-  const schemas = await loadUserSchemas(process.cwd(), schemaFile);
+export async function registerUserSchemas(ai: Genkit, schemaFile: string) {
+  const schemas = await loadUserSchemas(schemaFile);
   for (const [name, schema] of Object.entries(schemas)) {
-    ai.defineSchema(name, schema);
+    if(ai.registry.lookupSchema(name) == null) {
+      console.log(`Registering schema ${name}`);
+      ai.defineSchema(name, schema);
+    } else {
+      console.warn(`Schema ${name} already registered`);
+    }
   }
+  return schemas;
 }

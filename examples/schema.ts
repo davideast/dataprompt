@@ -61,8 +61,14 @@ export const HNPageAnalysis = z.object({
 });
 
 export const CodeSchema = z.object({
+  rootDir: z.string().describe('The root directory of the code generation. Used in the files object.'),
   code: z.string().describe("Generated code that should never be wrapped in markdown code ticks. It should always be pure formatted TypeScript code."),
   explanation: z.string().describe("A markdown formatted version of the LLM's explanation of the generated code. Can be a very long string to explain the code in detail"),
   newPackages: z.array(z.string()).describe('A list of new npm packages included in this code generation'),
   npmInstallCommand: z.string().describe('A command to install the new packages'),
+  files: z.object({
+    added: z.array(z.string()).describe('A list of new files included in this code generation using an absolute path'),
+    removed: z.array(z.string()).describe('A list of files removed in this code generation using an absolute path'),
+    modified: z.array(z.string()).describe('A list of files modified in this code generation using an absolute path'),
+  }),
 });

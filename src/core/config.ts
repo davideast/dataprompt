@@ -8,44 +8,42 @@ import { promisify } from 'util';
 import { pathToFileURL } from 'url';
 import { findUp } from 'find-up';
 import { DatapromptPlugin } from './interfaces.js';
+import * as NodeFS from 'node:fs';
 
 const fileExistsAsync = promisify(fs.exists);
+
+const SecretsSchema = z.object({
+  GOOGLEAI_API_KEY: z.string().min(1),
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1),
+});
+
+export type DatapromptSecrets = z.infer<typeof SecretsSchema>;
 
 export type DatapromptConfig = {
   genkit?: Genkit;
   plugins?: DatapromptPlugin[];
   promptsDir?: string;
   schemaFile?: string;
+  secrets?: DatapromptSecrets;
+  rootDir: string;
 };
-const KeysSchema = z.object({
-  GOOGLEAI_API_KEY: z.string().min(1),
-});
 
-type Keys = z.infer<typeof KeysSchema>;
-
-let keys: Keys | undefined;
 let aiInstance: Genkit | null = null;
+let _secrets: DatapromptSecrets | null = null;
 
-export function loadKeys() {
+export function loadSecrets(secrets: DatapromptSecrets): DatapromptSecrets {
   try {
-    keys = KeysSchema.parse(process.env);
+    const parsedSecrets = SecretsSchema.parse(secrets);
+    _secrets = parsedSecrets;
+    return parsedSecrets;
   } catch (error) {
-    console.error("Error: Invalid environment variables.", error);
     if (error instanceof z.ZodError) {
       error.errors.forEach((err) => {
         console.error(`  - ${err.path.join('.')}: ${err.message}`);
       });
     }
-    process.exit(1);
+    throw error;
   }
-  return keys;
-}
-
-export function getKeys() {
-  if (!keys) {
-    loadKeys();
-  }
-  return keys;
 }
 
 async function loadConfigFile(configPath: string): Promise<DatapromptConfig> {
@@ -65,19 +63,21 @@ async function loadConfigFile(configPath: string): Promise<DatapromptConfig> {
 
 export async function resolveConfig(
   providedConfig?: Partial<DatapromptConfig>
-): Promise<Required<DatapromptConfig>> {``
+): Promise<Omit<Required<DatapromptConfig>, 'secrets'>> {
   let userConfig: DatapromptConfig | null = null;
   const configFilenames = ['dataprompt.config.ts', 'dataprompt.config.js'];
-  let projectRoot: string | undefined;
+  let rootDir: string | undefined;
 
   const packageJsonPath = await findUp('package.json', { cwd: process.cwd() });
   if (packageJsonPath) {
-    projectRoot = path.dirname(packageJsonPath);
+    rootDir = path.dirname(packageJsonPath);
+  } else {
+    throw new Error('Could not find package.json in the current directory or any parent directories.')
   }
 
-  if (projectRoot) {
+  if (rootDir) {
     for (const filename of configFilenames) {
-      const configPath = path.join(projectRoot, filename);
+      const configPath = path.join(rootDir, filename);
       if (await fileExistsAsync(configPath)) {
         userConfig = await loadConfigFile(configPath);
         if (userConfig) break;
@@ -85,11 +85,14 @@ export async function resolveConfig(
     }
   }
 
-  const defaultConfig: Required<Omit<DatapromptConfig, 'genkit'>> = {
+  const defaultConfig: Required<Omit<DatapromptConfig, 'genkit' | 'secrets' | 'rootDir'>> = {
     plugins: [],
     promptsDir: 'prompts',
-    schemaFile: 'schema.js',
-};
+    schemaFile: 'schema.js'
+  };
+
+  const secretConfig = userConfig?.secrets ?? providedConfig?.secrets ?? process.env as any;
+  const secrets = loadSecrets(secretConfig);
 
   /*
    * Load order precedence:
@@ -103,20 +106,26 @@ export async function resolveConfig(
     plugins: userConfig?.plugins ?? providedConfig?.plugins ?? defaultConfig.plugins,
     promptsDir: userConfig?.promptsDir ?? providedConfig?.promptsDir ?? defaultConfig.promptsDir,
     schemaFile: userConfig?.schemaFile ?? providedConfig?.schemaFile ?? defaultConfig.schemaFile,
+    secrets,
+    rootDir,
   };
 
   return mergedConfig;
 }
 
-export function getGenkit(provider: string = 'googleai') {
-  if (!aiInstance) {
-    const loadedKeys = getKeys();
-    // Check if loadedKeys is defined before accessing its properties:
-    if (!loadedKeys) {
-      throw new Error("Environment variables not loaded. Make sure GOOGLEAI_API_KEY is set.");
-    }
-    const apiKey = loadedKeys.GOOGLEAI_API_KEY;
+function getSecrets(secrets?: DatapromptSecrets) {
+  if (!_secrets) {
+    _secrets = loadSecrets(secrets || process.env as DatapromptSecrets);
+  }
+  return _secrets;
+}
 
+export function getGenkit({ provider, secrets }: { 
+  provider?: string; 
+  secrets?: DatapromptSecrets 
+} = { provider: 'googleai' }) {
+  if (!aiInstance) {
+    const { GOOGLEAI_API_KEY: apiKey } = getSecrets();
     if (!apiKey) {
       throw new Error(`API key for provider "${provider}" not found in environment variables.  Make sure GOOGLEAI_API_KEY is set.`);
     }
