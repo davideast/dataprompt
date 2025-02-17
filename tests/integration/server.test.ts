@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { DatapromptConfig, createPromptServer } from '../../src/index.js'
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,174 +6,238 @@ import request from 'supertest';
 import { DatapromptPlugin } from '../../src/core/interfaces.js';
 import type { Server } from 'http'
 import * as fs from 'node:fs';
-import { findUpSync, findUp } from 'find-up'
+import { findUpSync } from 'find-up'
+import { DatapromptStore } from '../../src/core/dataprompt.js';
+import { z } from 'genkit'
+const MODEL = 'googleai/gemini-2.0-flash-exp';
 
-const MODEL = 'googleai/gemini-2.0-flash-exp'
+// Only used to test the prompt request responses
+export const TestSchema = z.object({
+  data: z.string(),
+  explanation: z.string(),
+});
 
-// Set the rootDir to tests using the closest schema.js file above
-// const currentFilePath = fileURLToPath(import.meta.url);
-// const schemaFile = await findUp('schema.js', { cwd: path.dirname(currentFilePath) });
-// const testRootDir = path.dirname(schemaFile!);
-
-const testPromptContent = (
-  options: {outputSchema: string} = {
-    outputSchema: 'TestSchema'
+function prompt(options: {
+  template: string;
+  outputSchema?: {
+    name: string,
+    schema: z.ZodType,
   }
-) => `---
-model: ${MODEL}
-output:
-  schema: ${options.outputSchema}
----
-This is a test prompt. Provide some random data and an explanation of this data.
-`;
+} = {
+    template: 'This is a test prompt. Provide some random data and an explanation of this data.'
+  },
+) {
+  const outputSchema = {
+    name: options.outputSchema?.name ?? 'TestSchema',
+    schema: options.outputSchema?.schema ?? TestSchema,
+  };
+  const template = `---
+  model: ${MODEL}
+  output:
+    schema: ${outputSchema.name}
+  ---
+  ${options.template}
+  `;
+  return { template, outputSchema }
+}
 
-describe('Dataprompt Server Integration Tests', () => {
+type PromptRequest = {
+  prompt: {
+    template: string;
+    outputSchema: {
+      name: string,
+      schema: z.ZodType,
+    }
+  },
+  context: [{
+    url: string;
+    toContain: string[];
+  }];
+};
+
+function createPromptRequests() {
+  const promptRequests = new Map<string, PromptRequest>();
+
+  promptRequests.set('test.prompt', {
+    prompt: prompt(),
+    context: [{
+      url: '/test',
+      toContain: []
+    }]
+  });
+  promptRequests.set('invoices/[id].prompt', {
+    prompt: prompt({
+      template: 'Invoice ID: {{request.params.id}}'
+    }),
+    context: [{
+      url: '/invoices/123',
+      toContain: ['123']
+    }]
+  });
+  promptRequests.set('items/[uid]/[itemId].prompt', {
+    prompt: prompt({
+      template: `Say this exactly word for word: 
+"This Item ID is {{request.params.itemId}} and this UID is {{request.params.uid}}"`
+    }),
+    context: [{
+      url: '/items/david/456',
+      toContain: ['456', 'david']
+    }]
+  });
+  return promptRequests;
+}
+
+function createSchema() {
+  return `import { z } from 'genkit';
+export const TestSchema = z.object({
+  data: z.string(),
+  explanation: z.string(),
+});
+`;
+}
+
+function findTestRoot() {
+  const currentFilePath = fileURLToPath(import.meta.url);
+  return findUpSync('tests', {
+    cwd: path.dirname(currentFilePath),
+    type: 'directory'
+  })!;
+}
+
+function customPlugin(): DatapromptPlugin {
+  return {
+    name: 'custom',
+    createDataSource: () => ({
+      name: 'customSource',
+      async fetchData() { return { data: 'test' }; }
+    })
+  };
+}
+
+function writePromptFiles(params: {
+  promptRequests: Map<string, PromptRequest>,
+  promptsDir: string,
+}) {
+  const { promptRequests, promptsDir } = params;
+  for (let [filePath, { prompt: { template } }] of promptRequests.entries()) {
+    const absolutePath = path.resolve(promptsDir, filePath);
+    const dirPath = path.dirname(absolutePath);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    fs.writeFileSync(absolutePath, template);
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+describe('dataprompt server & store', () => {
+  // Set the rootDir to main /tests dir as the root
+  const testRootDir = findTestRoot()
+  // cleared out after all tests are run
+  // probably not necessary but we do it anyways
+  const promptRequests = createPromptRequests();
+  const tasks = new Map<string, string>();  // no tasks yet
+
+  // created before all tests are run
+  // torn down after all tests are run
   let httpServer: Server;
   let tempDir: string;
-  let testRootDir: string;
+  let promptsDir: string;
+  let schemaFile: string;
+  let store: DatapromptStore;
 
-  beforeAll(() => {
-    // Set the rootDir to main tests root
-    const currentFilePath = fileURLToPath(import.meta.url);
-    testRootDir = findUpSync('tests', { 
-      cwd: path.dirname(currentFilePath),
-      type: 'directory'
-    })!;
-
+  beforeAll(async () => {
     // Create a temporary directory for prompts
     tempDir = fs.mkdtempSync(path.resolve(testRootDir, 'dataprompt-test-'));
-  });
-
-  beforeEach(async () => {
     fs.mkdirSync(tempDir, { recursive: true });
     // prompts dir needs to exist for dataprompt to run
-    fs.mkdirSync(path.join(tempDir, 'prompts'), { recursive: true });
+    promptsDir = fs.mkdirSync(path.join(tempDir, 'prompts'), { recursive: true })!;
+    schemaFile = path.resolve(path.join(tempDir, 'schema.js'));
+    // create schemaFile
+    fs.writeFileSync(schemaFile, createSchema());
+    const setup = await setupStoreAndServer({
+      config: {
+        rootDir: testRootDir,
+        promptsDir,
+        schemaFile,
+        plugins: [
+          customPlugin()
+        ],
+      }
+    });
+    httpServer = setup.server.listen(3031);
+    store = setup.store;
   });
 
-
-  afterEach(() => {
+  afterAll(() => {
     // Clean up the temporary directory
-    fs.rmSync(tempDir, { recursive: true, force: true })
-  });
-
-  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    promptRequests.clear();
+    tasks.clear();
     if (httpServer) {
       (httpServer as any).close();
       httpServer = null as any;
     }
   });
 
-  afterAll(() => {
-    // Clean up the temporary directory
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  });
+  function setupStoreAndServer(params: {
+    config: Required<Omit<DatapromptConfig, 'secrets' | 'genkit'>>
+  }) {
+    // Write prompt files to filesystem before starting the server
+    writePromptFiles({ promptRequests, promptsDir })
+    return createPromptServer({ config: params.config });
+  }
 
-  const setupStoreAndServer = async (
-    config: DatapromptConfig = {
-      rootDir: testRootDir
-    }, 
-    promptFiles: { [key: string]: string } = {}
-  ) => {
-    // Write prompt files to filesystem
-    for (const filePath in promptFiles) {
-      const absolutePath = path.join(tempDir, 'prompts', filePath);
-      const dirPath = path.dirname(absolutePath);
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-      }
-      fs.writeFileSync(absolutePath, promptFiles[filePath]);
+  function requestIt(promptRequest: PromptRequest) {
+    for (let { url, toContain } of promptRequest.context) {
+      it(`should generate a response for ${url}`, async () => {
+        const response = await request(httpServer).get(url);
+        console.log(url, response.body)
+        if(response.status === 429) {
+          console.warn('Rate limit hit');
+          return;
+        }
+        expect(response.status).toBe(200);
+        if (toContain.length > 0) {
+          for (let contains of toContain) {
+            expect(response.text).toContain(contains);
+          }
+          if (response.body) {
+            const parsed = promptRequest.prompt.outputSchema.schema.safeParse(response.body)
+            expect(parsed.success).toBe(true);
+            expect(parsed.data).toMatchObject(response.body)
+          }
+        }
+      })
     }
-    const { store, server } = await createPromptServer({
-      config: {
-        ...config,
-        promptsDir: config.promptsDir || `${tempDir}/prompts`
-      }
-    });
-    return { store, server };
-  };
+  }
 
-  // it('should create a dataprompt store with default options', async () => {
-  //   const { store } = await setupStoreAndServer();
-  //   expect(store).toBeDefined();
-  //   expect(store.routes.all().size).toBe(0);
-  //   expect(store.flows.all().size).toBe(0);
-  //   expect(store.tasks.all().size).toBe(0);
-  //   // has default plugins
-  //   expect(store.registry.dataSources.length).toBeGreaterThan(0);
-  // });
-
-  // it('should register a custom plugin', async () => {
-  //   function customPlugin(): DatapromptPlugin {
-  //     return {
-  //       name: 'custom',
-  //       createDataSource: () => ({
-  //         name: 'customSource',
-  //         async fetchData() { return { data: 'test' }; }
-  //       })
-  //     };
-  //   }
-
-  //   const { store } = await setupStoreAndServer({
-  //     plugins: [customPlugin()]
-  //   });
-  //   const provider = store.registry.getDataSource('customSource');
-
-  //   expect(provider).toBeDefined()
-  //   expect(provider.name).toBe('customSource');
-  // });
-
-  // it('should create a dataprompt server from the store', async () => {
-  //   const { server } = await setupStoreAndServer();
-  //   expect(server).toBeDefined();
-  // });
-
-  it('should serve a prompt and return a response', async () => {
-    const testRoute = '/test';
-    const promptFiles = { 'test.prompt': testPromptContent() };
-    const { server } = await setupStoreAndServer(undefined, promptFiles);
-
-    httpServer = server.listen(3022);
-    const response = await request(server).get(testRoute);
-
-    expect(response.status).toBe(200);
+  it('should create a dataprompt store with default options', async () => {
+    expect(store).toBeDefined();
+    expect(store.routes.all().size).toBe(promptRequests.size);
+    expect(store.flows.all().size).toBe(promptRequests.size);
+    expect(store.tasks.all().size).toBe(tasks.size);
+    // has default plugins
+    expect(store.registry.dataSources.length).toBeGreaterThan(0);
   });
 
-//   it('should invoke the correct flow with params from the request URL', async () => {
-//     // '/invoices/[id].prompt';
-//     const promptContent = `---
-// model: ${MODEL}
-// output: 
-//   schema: TestSchema
-// ---
-// Invoice ID: {{request.params.id}}`;
-//     const promptFiles = { 'invoices/[id].prompt': promptContent };
-//     const { server } = await setupStoreAndServer({}, promptFiles);
+  it('should register a custom plugin', async () => {
+    const provider = store.registry.getDataSource('customSource');
+    expect(provider).toBeDefined()
+    expect(provider.name).toBe('customSource');
+  });
 
-//     httpServer = server.listen(3021);
-//     const response = await request(httpServer).get('/invoices/123');
+  it('should create a dataprompt server from the store', async () => {
+    expect(httpServer).toBeDefined();
+  });
 
-//     expect(response.status).toBe(200);
-//     expect(response.text).toContain('Invoice ID: 123');
-//   });
-
-//   it('should handle data inputs alongside URL parameters', async () => {
-//     // '/items/[itemId].prompt';
-//     const promptContent = `---
-// model: ${MODEL}
-// output: 
-//   schema: TestSchema
-// ---
-// Item ID: {{request.params.itemId}}
-// Data: {{data.name}}
-// `;
-//     const promptFiles = { 'items/[itemId].prompt': promptContent };
-//     const { server } = await setupStoreAndServer({}, promptFiles);
-
-//     httpServer = server.listen(3000);
-//     const response = await request(httpServer).get('/items/456');
-
-//     expect(response.status).toBe(200);
-//     expect(response.text).toContain('Item ID: 456');
-//     expect(response.text).toContain('Data: Test Item');
-//   });
+  describe('prompt requests', async () => {
+    for await (let request of promptRequests.values()) {
+      requestIt(request);
+      sleep(300)
+    }
+  });
 });

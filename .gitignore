@@ -40,3 +40,4 @@ set-env.sh
 context.txt
 /gen
 
+tests/dataprompt-test-*

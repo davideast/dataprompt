@@ -26,8 +26,6 @@ async function loadUserSchemas(params: {
   if (!isAbsolute(schemaFile)) {
     schemaPath = join(rootDir, schemaFile);
   }
-  
-  console.log({ schemaPath: schemaPath })
 
   // Try loading the schema file, and if it fails, try the fallback.
   try {
@@ -78,7 +76,6 @@ export async function registerUserSchemas(params: {
   const schemaMap = new Map<string, z.ZodType>()
   for (const [name, schema] of Object.entries(schemas)) {
     if(genkit.registry.lookupSchema(name) == null) {
-      console.log(`Registering schema ${name}`);
       genkit.defineSchema(name, schema);
       schemaMap.set(name, schema);
     } else {
