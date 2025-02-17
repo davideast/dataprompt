@@ -34,8 +34,7 @@
     "src/firebase/package.json"
   ],
   "scripts": {
-    "setenv": "source ./set_env.sh",
-    "test": "npm run setenv && vitest",
+    "test": "vitest",
     "packx": "npm pack && npm i --prefix ./examples ./dataprompt-0.0.2.tgz",
     "build": "tsc",
     "clean": "rimraf ./dataprompt-0.0.1.tgz ./dist",

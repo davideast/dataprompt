@@ -1,0 +1,36 @@
+name: Run Vitest Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    # Only run if PR author has write access or is a collaborator
+    if: github.event.pull_request.author_association == 'COLLABORATOR' || github.event.pull_request.author_association == 'OWNER' || github.event.pull_request.author_association == 'MEMBER'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Create Google credentials file
+        shell: bash
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > google-credentials.json
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          
+      - name: Run Vitest tests
+        env:
+          GOOGLEAI_API_KEY: ${{ secrets.GOOGLEAI_API_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS: ./google-credentials.json
+        run: npm test
