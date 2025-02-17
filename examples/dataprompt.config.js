@@ -9,6 +9,8 @@ import { fsPlugin } from 'dataprompt/plugins/fs'
 export default {
   promptsDir: 'prompts',
   plugins: [
-    fsPlugin()
+    fsPlugin({
+      sandboxPath: '../'
+    })
   ]
 }

@@ -1,11 +1,10 @@
 import { Genkit } from 'genkit';
-import { join } from 'node:path';
 import { ScheduledTask } from 'node-cron';
 import { DatapromptRoute } from './server.js';
 import { PluginRegistry } from '../core/registry.js';
 import { createRoute } from './route-builder.js';
 import { createFileMap } from './file-system.js';
-import { loadUserSchemas } from '../utils/schema-loader.js';
+import { SchemaMap } from '../utils/schema-loader.js';
 import { events } from '../core/events.js';
 import { randomUUID } from 'node:crypto';
 
@@ -39,16 +38,15 @@ export function createTask(
 
 export async function createRouteCatalog(params: {
   ai: Genkit;
-  basePath: string;
+  promptDir: string;
   registry: PluginRegistry;
+  userSchemas: SchemaMap,
 }): Promise<RouteCatalog> {
-  const { ai, basePath, registry } = params;
-  const projectRoot = join(basePath, '..');
-  const userSchemas = await loadUserSchemas(projectRoot);
+  const { ai, promptDir, registry, userSchemas } = params;
   const express: Map<string, DatapromptRoute> = new Map();
   const next: Map<string, DatapromptRoute> = new Map();
   const tasks: Map<string, ScheduledTask> = new Map();
-  const fileMap = await createFileMap(basePath);
+  const fileMap = await createFileMap(promptDir);
 
   for (const [expressRoute, file] of fileMap.entries()) {
     try {
@@ -83,7 +81,8 @@ export async function createRouteCatalog(params: {
         next.set(route.nextRoute, route);
       }
     } catch (error) {
-      throw new Error(`Error processing prompt file ${file.path}: ${error}`);
+      throw error;
+      // throw new Error(`Error processing prompt file ${file.path}: ${error}`);
     }
   }
   return { express, next, tasks };

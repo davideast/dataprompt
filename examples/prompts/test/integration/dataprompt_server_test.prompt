@@ -1,0 +1,55 @@
+---
+model: googleai/gemini-2.0-flash-exp
+data.prompt:
+  sources:
+    fs:
+      context: context.txt
+      background: 
+        path: system_prompts/background.md
+        format: text
+      plan: 
+        path: system_prompts/plan.explanation.md
+        format: text
+      important_files:
+        path: system_prompts/important-files.md
+        format: text
+  result:
+    fs:
+      overwrite:
+        - [src/tests/integration/dataprompt_server_test.ts, output.code]
+        - [src/tests/integration/dataprompt_server_test.md, output.explanation]
+      append:
+        - [src/tests/integration/dataprompt_server_test.md, output.newPackages]
+        - [src/tests/integration/dataprompt_server_test.md, output.npmInstallCommand]
+output:
+  schema: CodeSchema
+---
+
+{{background}}
+
+{{important_files}}
+
+## Intent
+I want to set up a behavior based testing structure for dataprompt based on the structure in genkit's testing file structure. I will be using vitest as my testing tool. Read the code of my app which is formatted as an LLM friendly structure with comments noting the file paths and imports. I want to identify behaviors that are critical to be tested and especially integration testing. The previous implementation plan below is a proposed testing file structure for the `dataprompt` library, mirroring the behaviors of dataprompt's source code. Read the Action below and only focus on the single file and goals.
+
+Action: Generate vitest tests for the `tests/integration/dataprompt_server_test.ts` file based on the details on the plan. The goal is to test the behaviors of the `dataprompt` function (the public API) and the server creation process, ensuring that everything works correctly. You will implement the normal best practices of integration testing with servers as well as consider the following details:
+- Use a memory file system package (or something built into vitest) instead of communicating with the file system.
+- Ensure you are following proper set ups and tear downs between tests and test runs.
+- How a user can create a dataprompt store with the default options and a different mixture of options
+- How a user can create a dataprompt server from this store.
+- If the store contains the proper routes, flows, and tasks.
+- If the store properly contains default plugins
+- If the store can properly register a plugin.
+- If the store can take a different prompt directory
+- If the store can take a different schema file
+- Only use the getGenkt() helper to create an instance for now. This will be tested later.
+- If the server can receive a request and return the proper response.
+- If the .generate() function can take in only a URL path containing params in the path and invoke the correct flow with the correct inputs from the request URL and from the data inputs as well
+- Implement other integration best practices I have missed
+- Implement other critical and important use cases I have missed
+
+# Previous implementation plan
+{{plan}}
+
+## Library Code in an LLM friendly format
+{{context}}

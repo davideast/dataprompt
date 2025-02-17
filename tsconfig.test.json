@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "NodeNext", 
     "moduleResolution": "NodeNext",
-    "outDir": "./dist",
+    "outDir": "./dist-test",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -12,13 +12,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
-    "rootDir": "./src"
+    "rootDir": "./test"
   },
   "include": [
-    "src/index.ts",
-    "src/cli/index.ts",
-    "src/plugins/**/*.ts",
-    "src/context/index.ts"
+    "./test/schema.ts",
   ],
   "exclude": ["node_modules", "dist"]
 }

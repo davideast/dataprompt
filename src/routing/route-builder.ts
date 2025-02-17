@@ -2,7 +2,7 @@ import { Genkit, z } from 'genkit';
 import { RequestContextSchema, DatapromptFile } from '../core/interfaces.js';
 import { PluginRegistry } from '../core/registry.js';
 import { extractYAML } from '../utils/yaml.js';
-import { SchemaMap } from '../utils/schema-loader.js';
+import { SchemaExports, SchemaMap } from '../utils/schema-loader.js';
 import { DatapromptRoute } from './server.js';
 import { createPromptFlow, FlowDefinition } from './flow-builder.js';
 

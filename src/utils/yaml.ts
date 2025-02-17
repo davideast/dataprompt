@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import { SchemaMap } from './schema-loader.js';
+import { SchemaExports, SchemaMap } from './schema-loader.js';
 import { PluginRegistry } from '../core/registry.js';
 import { PromptMetadata } from 'genkit';
 
@@ -97,7 +97,7 @@ export async function extractYAML(
         typeof options.output.schema === 'string'
       ) {
         const schemaName = options.output.schema;
-        const resolvedSchema = userSchemas[schemaName];
+        const resolvedSchema = userSchemas.get(schemaName);
         if (resolvedSchema) {
           options.output.schema = resolvedSchema;
         } else {

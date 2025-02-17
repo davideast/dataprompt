@@ -1,18 +1,20 @@
 # dataprompt: prompts with data superpowers
 > Status: alpha
 
+[![npm version](https://badge.fury.io/js/dataprompt.svg)](https://badge.fury.io/js/dataprompt)
+
 <a href="https://idx.google.com/new?template=https%3A%2F%2Fgithub.com%2Fdavideast%2Fdataprompt%2Ftree%2Fmain%2Ftemplate">
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
-      srcset="https://cdn.idx.dev/btn/open_dark_32.svg">
+      srcset="https://cdn.idx.dev/btn/try_dark_32.svg">
     <source
       media="(prefers-color-scheme: light)"
-      srcset="https://cdn.idx.dev/btn/open_light_32.svg">
+      srcset="https://cdn.idx.dev/btn/try_light_32.svg">
     <img
       height="32"
-      alt="Open in IDX"
-      src="https://cdn.idx.dev/btn/open_purple_32.svg">
+      alt="Try in IDX"
+      src="https://cdn.idx.dev/btn/try_purple_32.svg">
   </picture>
 </a>
 
