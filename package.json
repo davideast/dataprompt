@@ -1,6 +1,6 @@
 {
   "name": "dataprompt",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Prompts with data superpowers",
   "type": "module",
   "main": "./dist/index.js",
@@ -37,7 +37,7 @@
     "test": "vitest",
     "packx": "npm pack && npm i --prefix ./examples ./dataprompt-0.0.2.tgz",
     "build": "tsc",
-    "clean": "rimraf ./dataprompt-0.0.4.tgz ./dist",
+    "clean": "rimraf ./dataprompt-0.0.5.tgz ./dist",
     "prepack": "npm run clean && npm run build",
     "postbuild": "chmod +x dist/cli/index.js",
     "c": "tsx ./src/context/index.ts",
