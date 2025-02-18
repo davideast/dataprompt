@@ -163,7 +163,6 @@ The dotprompt format defines several properties:
 
 ```hbs
 ---
----
 model: googleai/gemini-2.0-flash
 input:
   # not needed in data.prompt
