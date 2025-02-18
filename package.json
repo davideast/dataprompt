@@ -1,6 +1,6 @@
 {
   "name": "dataprompt",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Prompts with data superpowers",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,7 +42,7 @@
     "postbuild": "chmod +x dist/cli/index.js",
     "c": "tsx ./src/context/index.ts",
     "cc": "tsx ./src/context/index.ts -c -o ./gen/context.txt",
-    "c:all": "npm run c -- -o ./gen/context.txt ./src/core/dataprompt.ts"
+    "c:all": "npm run c -- -o ./gen/context.txt ./src/core/index.ts"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
@@ -62,7 +62,6 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
-    "@genkit-ai/dotprompt": "^1.0.0-rc.5",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/googleai": "^1.0.4",
     "@types/supertest": "^6.0.2",
