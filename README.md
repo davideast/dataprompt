@@ -58,7 +58,7 @@ Create dotprompt, `.prompt`, files that combine Handlebars templating with data 
 ```hbs
 ---
 # File: prompts/sharks/[shark].prompt
-model: googleai/gemini-2.0-flash-exp
+model: googleai/gemini-2.0-flash
 data.prompt:
   sources:
     firestore: # Load from Firestore

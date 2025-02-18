@@ -77,7 +77,7 @@ export function createPromptFlow(
 
       // 2. Prepare prompt input (including fetched data)
       const promptInput = { ...promptSources, request };
-
+      
       // 3. Render prompt (for logging)
       if (logger) {
         const renderedPrompt = await prompt.render(promptInput);
@@ -86,7 +86,7 @@ export function createPromptFlow(
 
       // 4. Generate Prompt Output
       const result = await prompt(promptInput);
-      
+
       // 5. Execute Result Actions
       await executeResultActions({
         resultActions,

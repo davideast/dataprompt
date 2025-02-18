@@ -9,7 +9,7 @@ export const InvoiceSchema = z.object({
 });
 
 export const Message = z.object({
-  message: z.string().describe('A message')
+  message: z.string()
 });
 
 export const SharkFact = z.object({
