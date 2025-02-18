@@ -70,7 +70,7 @@ project/
 │  │  ├─ [page].prompt
 │  ├─ hello.prompt
 ├─ schema.ts
-├─ datapromp.config.js (optional)
+├─ dataprompt.config.js (optional)
 ├─ package.json
 ```
 
