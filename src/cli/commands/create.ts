@@ -68,17 +68,18 @@ data.prompt:
   sources:
     fetch:
       news: https://api.hnpwa.com/v0/news/1.json
-  result:
-    firestore:
-      push:
-        - ["/hackernews-items", news] 
-        - ["/analysis", output]
+## if using firestore
+#  result:
+#    firestore:
+#      push:
+#        - ["/hackernews-items", news] 
+#        - ["/analysis", output]
 output:
   schema: HackerNewsAnalysisSchema
 ---
-You are an expert at summarizing Hacker News articles.  Given the following data, provide a concise summary of each article.
+You are an expert at summarizing Hacker News articles. Given the following data, provide a concise summary of each article.
 
-{{news}}
+{{json news}}
 `;
     await fs.writeFile(path.join(projectPath, "prompts/hn.prompt"), promptContent);
 
@@ -191,8 +192,8 @@ export GOOGLE_APPLICATION_CREDENTIALS="<./your-service-account.json>"
 
 ## Available Routes
 
--   \`GET /hn\`: Fetches Hacker News data for the given page and saves it to Firestore.
--   \`GET /sharks/:shark\`: Summarizes facts about a specific shark.
+-   \`GET /hn\`: Fetches Hacker News data for the given page.
+-   \`GET /sharks/:shark\`: Summarizes facts about a specific shark and saves to Firestore.
 
 ## Development
 
