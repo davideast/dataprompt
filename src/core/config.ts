@@ -71,7 +71,7 @@ export async function resolveConfig(
     promptsDir: 'prompts',
     // schema file is resolved to root of package.json
     // but the built .js not .ts version.
-    schemaFile: 'schema.js',
+    schemaFile: 'schema.ts',
     genkit: getGenkit(),
     secrets: process.env as DatapromptSecrets,
     // root is decided by user config or package.json

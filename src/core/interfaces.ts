@@ -1,4 +1,4 @@
-import { PromptMetadata, z } from 'genkit';
+import { PromptConfig as PromptMetadata, z } from 'genkit';
 import { DatapromptRoute } from '../routing/server.js';
 import { ScheduledTask } from 'node-cron';
 

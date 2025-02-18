@@ -101,6 +101,8 @@ export async function execute(params: {
       dataToWrite = data;
     } else if (op.format === 'json') {
       dataToWrite = JSON.stringify(data, null, 2);
+    } else if (op.format === 'text') {
+      dataToWrite = data.toString();
     } else {
       throw new Error(`Invalid data type for text format, must be a string, received: ${typeof data}`);
     }

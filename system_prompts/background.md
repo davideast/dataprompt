@@ -20,7 +20,7 @@ The brackets: `[]` represent route parameters, following Next.js's format.
 ```hbs
 ---
 # all properties outside of data.prompt are specific to Genkit's dotprompt
-model: googleai/gemini-2.0-flash-exp
+model: googleai/gemini-2.0-flash
 config:
   temperature: 1.0
 # data.prompt is specific to dataprompt and the "." is a requirement of the
@@ -95,7 +95,7 @@ Analyze and compare the top Hacker News stories from different pages (provided i
 </page-{{request.params.next}}>
 ```
 
-## Zod Schema
+### Zod Schema for example
 
 ```ts
 // Genkit provides zod as a re-exported dependency
@@ -134,4 +134,39 @@ export const HNAnalysisSchema = z.object({
     change: z.string().describe("Description of a significant change in themes, topics, or content types."),
   })).describe("Significant changes in themes, topics, or content types between the pages.").optional(),
 });
+```
+
+## Firestore Example
+
+```hbs
+---
+model: googleai/gemini-2.0-flash
+data.prompt:
+  sources:
+    firestore:
+      shark: sharks/{{request.params.shark}}
+      facts: "/facts"
+  result:
+    firestore:
+      push:
+        - ["/facts", output]
+output:
+  schema: SharkFact
+---
+Tell me a fact about the {{shark.type}} shark.
+Today's date is {{dateFormat "today" format="yyyy-MM-dd"}}
+
+Don't tell me these facts again:
+{{#each facts as |doc|}}
+  - {{doc.fact}}
+{{/each}}
+```
+
+### Zod Schema for example
+
+```ts
+export const SharkFact = z.object({
+  fact: z.string(),
+  dateString: z.string().describe('ISO Date String')
+})
 ```

@@ -63,7 +63,7 @@ export const HackerNewsAnalysisSchema = z.object({
     await fs.writeFile(path.join(projectPath, "schema.ts"), schemaContent);
 
     const promptContent = `---
-model: googleai/gemini-2.0-flash-exp
+model: googleai/gemini-2.0-flash
 data.prompt:
   sources:
     fetch:
@@ -83,7 +83,7 @@ You are an expert at summarizing Hacker News articles.  Given the following data
     await fs.writeFile(path.join(projectPath, "prompts/hn.prompt"), promptContent);
 
     const sharkPrompt = `---
-model: googleai/gemini-2.0-flash-exp
+model: googleai/gemini-2.0-flash
 data.prompt:
   sources:
     firestore:
@@ -112,12 +112,12 @@ Don't tell me these facts again:
       type: "module",
       dependencies: {
         "dataprompt": "*",
-        "genkit": "^0.9.12",
+        "genkit": "^1.0.4",
       },
       devDependencies: {
         "@types/express": "^4.17.21",
         "@types/node": "^20.11.19",
-        "genkit-cli": "^0.9.12",
+        "genkit-cli": "^1.0.4",
         "typescript": "^5.3.3",
         "tsx": "^4.7.1"
       },

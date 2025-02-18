@@ -9,7 +9,7 @@ import * as fs from 'node:fs';
 import { findUpSync } from 'find-up'
 import { DatapromptStore } from '../../src/core/dataprompt.js';
 import { z } from 'genkit'
-const MODEL = 'googleai/gemini-2.0-flash-exp';
+const MODEL = 'googleai/gemini-2.0-flash';
 
 // Only used to test the prompt request responses
 export const TestSchema = z.object({
@@ -17,73 +17,123 @@ export const TestSchema = z.object({
   explanation: z.string(),
 });
 
+export const HNSchema = z.object({
+  topThree: z.array(z.object({
+    title: z.string(),
+    url: z.string(),
+  }))
+});
+
 function prompt(options: {
   template: string;
-  outputSchema?: {
+  outputSchema: {
     name: string,
     schema: z.ZodType,
-  }
+  },
+  useFetch: boolean;
 } = {
-    template: 'This is a test prompt. Provide some random data and an explanation of this data.'
+    template: 'This is a test prompt. Provide some random data and an explanation of this data.',
+    useFetch: false,
+    outputSchema: {
+      name: 'TestSchema',
+      schema: TestSchema
+    }
   },
 ) {
-  const outputSchema = {
-    name: options.outputSchema?.name ?? 'TestSchema',
-    schema: options.outputSchema?.schema ?? TestSchema,
-  };
-  const template = `---
-  model: ${MODEL}
-  output:
-    schema: ${outputSchema.name}
-  ---
-  ${options.template}
-  `;
+  const { outputSchema } = options;
+  const baseTemplate = `---
+model: ${MODEL}
+output:
+  schema: ${outputSchema.name}
+---
+${options.template}
+`
+  const fetchTemplate = `---
+model: ${MODEL}
+data.prompt:
+  sources:
+    fetch:
+      news: https://api.hnpwa.com/v0/news/1.json
+output:
+  schema: ${outputSchema.name}
+---
+${options.template}
+`
+  const template = options.useFetch ? fetchTemplate : baseTemplate;
   return { template, outputSchema }
 }
 
-type PromptRequest = {
+type PromptRequest<Output = any> = {
   prompt: {
     template: string;
     outputSchema: {
       name: string,
-      schema: z.ZodType,
+      schema: Output,
     }
   },
   context: [{
     url: string;
-    toContain: string[];
+    check: 'body' | 'text';
+    toContain: Array<(body: Output) => boolean>;
   }];
 };
 
 function createPromptRequests() {
   const promptRequests = new Map<string, PromptRequest>();
 
-  promptRequests.set('test.prompt', {
-    prompt: prompt(),
-    context: [{
-      url: '/test',
-      toContain: []
-    }]
-  });
   promptRequests.set('invoices/[id].prompt', {
     prompt: prompt({
-      template: 'Invoice ID: {{request.params.id}}'
+      template: 'Invoice ID: {{request.params.id}}',
+      useFetch: false,
+      outputSchema: {
+        name: 'TestSchema',
+        schema: TestSchema
+      }
     }),
     context: [{
       url: '/invoices/123',
-      toContain: ['123']
+      check: 'text',
+      toContain: [
+        (text: string) => text.includes('123')
+      ]
     }]
   });
   promptRequests.set('items/[uid]/[itemId].prompt', {
     prompt: prompt({
       template: `Say this exactly word for word: 
-"This Item ID is {{request.params.itemId}} and this UID is {{request.params.uid}}"`
+"This Item ID is {{request.params.itemId}} and this UID is {{request.params.uid}}"`,
+      useFetch: false,
+      outputSchema: {
+        name: 'TestSchema',
+        schema: TestSchema
+      }
     }),
     context: [{
       url: '/items/david/456',
-      toContain: ['456', 'david']
+      check: 'text',
+      toContain: [
+        (text: string) => text.includes('456'),
+        (text: string) => text.includes('david')
+      ]
     }]
   });
+  promptRequests.set('hn/home.prompt', {
+    prompt: prompt({
+      template: `Provide me the top 3 stories from Hacker News \n\n{{json news}}`,
+      useFetch: true,
+      outputSchema: {
+        name: 'HNSchema',
+        schema: HNSchema
+      }
+    }),
+    context: [{
+      url: '/hn/home',
+      check: 'body',
+      toContain: [
+        (output: z.infer<typeof HNSchema>) => output.topThree.length === 3
+      ]
+    }]
+  })
   return promptRequests;
 }
 
@@ -92,6 +142,13 @@ function createSchema() {
 export const TestSchema = z.object({
   data: z.string(),
   explanation: z.string(),
+});
+
+export const HNSchema = z.object({
+  topThree: z.array(z.object({
+    title: z.string(),
+    url: z.string(),
+  }))
 });
 `;
 }
@@ -192,7 +249,7 @@ describe('dataprompt server & store', () => {
   }
 
   function requestIt(promptRequest: PromptRequest) {
-    for (let { url, toContain } of promptRequest.context) {
+    for (let { url, toContain, check } of promptRequest.context) {
       it(`should generate a response for ${url}`, async () => {
         const response = await request(httpServer).get(url);
         console.log(url, response.body)
@@ -203,7 +260,7 @@ describe('dataprompt server & store', () => {
         expect(response.status).toBe(200);
         if (toContain.length > 0) {
           for (let contains of toContain) {
-            expect(response.text).toContain(contains);
+            expect(contains(response[check])).toBe(true);
           }
           if (response.body) {
             const parsed = promptRequest.prompt.outputSchema.schema.safeParse(response.body)
@@ -214,7 +271,7 @@ describe('dataprompt server & store', () => {
       })
     }
   }
-
+``
   it('should create a dataprompt store with default options', async () => {
     expect(store).toBeDefined();
     expect(store.routes.all().size).toBe(promptRequests.size);
@@ -229,6 +286,12 @@ describe('dataprompt server & store', () => {
     expect(provider).toBeDefined()
     expect(provider.name).toBe('customSource');
   });
+
+  it('should have the fetch plugin by default', () => {
+    const provider = store.registry.getDataSource('fetch');
+    expect(provider).toBeDefined()
+    expect(provider.name).toBe('fetch');
+  })
 
   it('should create a dataprompt server from the store', async () => {
     expect(httpServer).toBeDefined();

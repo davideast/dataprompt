@@ -1,7 +1,7 @@
 import yaml from 'js-yaml';
 import { SchemaExports, SchemaMap } from './schema-loader.js';
 import { PluginRegistry } from '../core/registry.js';
-import { PromptMetadata } from 'genkit';
+import { PromptConfig as PromptMetadata } from 'genkit';
 
 export interface PromptFile {
   template: string;

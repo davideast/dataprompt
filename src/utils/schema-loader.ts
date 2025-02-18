@@ -1,8 +1,12 @@
 import { z } from 'genkit';
-import { join, isAbsolute } from 'node:path';
+import path, { join, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import { Genkit } from 'genkit'
+import { jsonSchemaToZod } from 'json-schema-to-zod';
+import fs from 'node:fs/promises';
+import { Schema } from 'dotprompt';
+import { findUp } from 'find-up';
 
 export interface SchemaExports {
   [key: string]: z.ZodType<any, any, any>;
@@ -18,39 +22,64 @@ async function loadSchemaFile(filePath: string) {
 async function loadUserSchemas(params: {
   rootDir: string,
   schemaFile: string,
+  buildDir?: string,
 }): Promise<SchemaExports> {
-  const { rootDir, schemaFile } = params;
-  let schemaPath = schemaFile;
+  const { rootDir, schemaFile, buildDir: providedBuildDir } = params;
+  let resolvedBuildDir = providedBuildDir;
 
-  // only construct the path if it's not absolute
-  if (!isAbsolute(schemaFile)) {
-    schemaPath = join(rootDir, schemaFile);
+  const isTypeScriptFile = /\.ts(x)?$|\.cts|\.mts$/.test(schemaFile);
+
+  if (isTypeScriptFile && !providedBuildDir) {
+    resolvedBuildDir = await findBuildDir(rootDir);
   }
 
-  // Try loading the schema file, and if it fails, try the fallback.
-  try {
-    if (existsSync(schemaPath)) {
-      const schemaModule = await loadSchemaFile(schemaPath);
+  let compiledFilePath: string | undefined;
+  if (isTypeScriptFile && resolvedBuildDir) {
+    const schemaFileBase = path.basename(schemaFile).replace(/\.ts(x)?$|\.cts|\.mts$/, '');
+
+      // Determine correct javascript file extension
+    let jsExtension = '.js';
+    if (schemaFile.endsWith('.cts')) {
+      jsExtension = '.cjs';
+    } else if (schemaFile.endsWith('.mts')) {
+      jsExtension = '.mjs';
+    }
+
+    compiledFilePath = path.resolve(resolvedBuildDir, `${schemaFileBase}${jsExtension}`);
+  }
+
+  if (compiledFilePath && existsSync(compiledFilePath)) {
+    try {
+      const schemaModule = await loadSchemaFile(compiledFilePath);
       return extractSchemas(schemaModule);
-    } else {
-      // Only try the fallback if the initial path doesn't exist.
-      const fallbackSchemaPath = join(rootDir, 'schema.js');
-      if (schemaPath !== fallbackSchemaPath && existsSync(fallbackSchemaPath)) {
+    } catch (error) {
+      console.error(`Error loading compiled schema file: ${compiledFilePath}`, error);
+    }
+  }
+
+    let originalSchemaPath = path.resolve(rootDir, schemaFile);
+
+    if (existsSync(originalSchemaPath) && !isTypeScriptFile) {
+        const schemaModule = await loadSchemaFile(originalSchemaPath);
+        return extractSchemas(schemaModule);
+    }
+
+  const fallbackSchemaPath = path.resolve(rootDir, 'schema.js');
+  if (existsSync(fallbackSchemaPath)) {
+    try{
         const schemaModule = await loadSchemaFile(fallbackSchemaPath);
         return extractSchemas(schemaModule);
-      } else {
-        console.warn(`Schema file not found at either ${schemaPath} or ${fallbackSchemaPath}`);
-        return {};
-      }
+    } catch (error) {
+      console.error(`Error loading fallback schema file: ${fallbackSchemaPath}`, error);
     }
-  } catch (error) {
-    throw new Error(`Error loading schema file: ${error}`);
   }
+
+  console.warn(`Schema file not found`);
+  return {};
 }
 
 function extractSchemas(schemaModule: any): SchemaExports {
   const schemaMap: SchemaExports = {};
-
   for (const key in schemaModule) {
     if (Object.hasOwn(schemaModule, key)) {
       const value = schemaModule[key];
@@ -59,23 +88,21 @@ function extractSchemas(schemaModule: any): SchemaExports {
       }
     }
   }
-
   return schemaMap;
 }
 
-// TODO(davideast): Consider moving this into a manager to allow
-// for dynamically loading schemas at runtime. But you actually have 
-// to understand how Genkit manages schemas.
-export async function registerUserSchemas(params: { 
-  genkit: Genkit, 
+
+export async function registerUserSchemas(params: {
+  genkit: Genkit,
   schemaFile: string,
   rootDir: string,
+  buildDir?: string,
 }): Promise<SchemaMap> {
-  const { genkit } = params;
-  const schemas = await loadUserSchemas(params);
-  const schemaMap = new Map<string, z.ZodType>()
+  let { genkit, buildDir } = params;
+  const schemas = await loadUserSchemas({...params, buildDir});
+  const schemaMap = new Map<string, z.ZodType>();
   for (const [name, schema] of Object.entries(schemas)) {
-    if(genkit.registry.lookupSchema(name) == null) {
+    if (genkit.registry.lookupSchema(name) == null) {
       genkit.defineSchema(name, schema);
       schemaMap.set(name, schema);
     } else {
@@ -83,4 +110,97 @@ export async function registerUserSchemas(params: {
     }
   }
   return schemaMap;
+}
+
+async function findBuildDir(rootDir: string): Promise<string | undefined> {
+  const tsconfigPath = await findUp('tsconfig.json', { cwd: rootDir });
+
+  if (tsconfigPath) {
+    try {
+      const tsconfigContent = await fs.readFile(tsconfigPath, 'utf-8');
+      const tsconfig = JSON.parse(tsconfigContent);
+
+      const outDir = tsconfig.compilerOptions?.outDir;
+
+      if (outDir) {
+        return path.resolve(path.dirname(tsconfigPath), outDir);
+      }
+    } catch (error) {
+      console.warn(`Error reading or parsing tsconfig.json: ${error}`);
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
+
+export async function generateAndImportZodSchema(params: {
+  rootDir: string,
+  schema: Schema
+}) {
+  const code = jsonSchemaToZod(params.schema, { module: "esm", type: false });
+  const tempFileName = path.resolve(params.rootDir, './.dataprompt_schemas.js');
+  await fs.writeFile(tempFileName, code);
+  try {
+    const module = await import(tempFileName);
+    return module.default;
+  } finally {
+    await fs.unlink(tempFileName);
+  }
+}
+
+// TODO(davideast): This is really a best guess for detecting 
+// if the schema supplied in a dotprompt is a zod, primitive, or picoschema
+export function isZodSchemaInPrompt(schema: any): boolean {
+  const primitiveTypes = ['string', 'number', 'boolean', 'integer'];
+  if (typeof schema === 'string') {
+    // Check if the string is one of the primitive types.
+    if (primitiveTypes.includes(schema.toLowerCase())) {
+      return false; // It's a primitive type, not a Zod schema name.
+    }
+    return true; // It's a string, and *not* a primitive type, so assume Zod schema name.
+  }
+
+  if (typeof schema === 'object' && schema !== null) {
+    return false; // Object indicates an inline schema (not Zod)
+  }
+
+  return false; // Other cases (e.g., missing 'output', 'schema', or an unexpected type)
+}
+
+async function resolveZodSchema(params: {
+  schema: any,
+  rootDir: string,
+  ai: Genkit,
+}): Promise<z.ZodSchema> {
+  const { schema, rootDir, ai } = params;
+  if (isZodSchemaInPrompt(schema)) {
+    // Case 1:  It's a Zod schema name (string, not a primitive).
+    const foundSchema = ai.registry.lookupSchema(schema);
+    if (!foundSchema?.schema) {
+      throw new Error(`Zod schema with name "${schema}" not found in registry.`);
+    }
+    return foundSchema.schema;
+  } else if (typeof schema === 'object' && schema !== null) {
+    // Case 2: It's an inline JSON schema (Picoschema).
+    return await generateAndImportZodSchema({ rootDir, schema });
+  } else if (typeof schema === 'string') {
+    //Case 3: It's a string and a primitive
+    if (schema === 'string') {
+      return z.string();
+    }
+    if (schema === 'number') {
+      return z.number();
+    }
+    if (schema === 'boolean') {
+      return z.boolean();
+    }
+    if (schema === 'integer') {
+      return z.number().int(); //Zod uses .int() to create an integer schema from a number
+    }
+    throw new Error(`Unknown primitive schema type: ${schema}`);
+  }
+  else {
+    throw new Error(`Invalid schema definition: ${JSON.stringify(schema)}`);
+  }
 }

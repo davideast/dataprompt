@@ -2,7 +2,7 @@ import cron, { ScheduledTask, schedule, validate } from 'node-cron';
 import { Trigger, RequestContext, TriggerProvider, DatapromptPlugin } from '../../core/interfaces.js';
 import { DatapromptRoute } from '../../routing/server.js';
 import { events } from '../../core/events.js';
-import { DataSourceLogEvent, FlowLogEvent, LogContext } from '../../utils/logging.js'; 
+import { DataSourceLogEvent, FlowLogEvent } from '../../utils/logging.js'; 
 import { randomUUID } from 'crypto';
 
 type NodeCron = {
@@ -40,7 +40,7 @@ class DevScheduleTrigger implements Trigger {
         id: executionId,
         type: 'task',
         flowName: route.flowDef.name,
-        inputSchema: route.flowDef.inputSchema,
+        inputSchema: route.flowDef.promptMetadata.input?.schema,
         input: request,
         task: task,
         startTime: Date.now(),
