@@ -10,6 +10,7 @@ import { findUpSync } from 'find-up'
 import { DatapromptStore } from '../../src/core/dataprompt.js';
 import { z } from 'genkit'
 const MODEL = 'googleai/gemini-2.0-flash';
+import { registerUserSchemas } from '../../src/utils/schema-loader.js'
 
 // Only used to test the prompt request responses
 export const TestSchema = z.object({
@@ -295,6 +296,16 @@ describe('dataprompt server & store', () => {
 
   it('should create a dataprompt server from the store', async () => {
     expect(httpServer).toBeDefined();
+  });
+
+  it('should register and resolve schemas', async () => {
+    const userSchemas = await registerUserSchemas({
+      genkit: store.ai,
+      schemaFile: schemaFile,
+      rootDir: testRootDir,
+    })
+    expect(userSchemas.get('TestSchema')).toBeDefined()
+    expect(userSchemas.get('HNSchema')).toBeDefined()
   });
 
   describe('prompt requests', async () => {

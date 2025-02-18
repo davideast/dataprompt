@@ -83,7 +83,7 @@ function extractSchemas(schemaModule: any): SchemaExports {
   for (const key in schemaModule) {
     if (Object.hasOwn(schemaModule, key)) {
       const value = schemaModule[key];
-      if (value instanceof z.ZodType) {
+      if (isZodSchema(value)) {
         schemaMap[key] = value;
       }
     }
@@ -102,10 +102,14 @@ export async function registerUserSchemas(params: {
   const schemas = await loadUserSchemas({...params, buildDir});
   const schemaMap = new Map<string, z.ZodType>();
   for (const [name, schema] of Object.entries(schemas)) {
-    if (genkit.registry.lookupSchema(name) == null) {
+    const lookup = genkit.registry.lookupSchema(name);
+    if (lookup == null) {
       genkit.defineSchema(name, schema);
       schemaMap.set(name, schema);
     } else {
+      if(lookup.schema) {
+        schemaMap.set(name, lookup.schema)
+      }
       console.warn(`Schema ${name} already registered`);
     }
   }
@@ -147,6 +151,10 @@ export async function generateAndImportZodSchema(params: {
   } finally {
     await fs.unlink(tempFileName);
   }
+}
+
+function isZodSchema(value: any): boolean {
+  return value && typeof value === 'object' && value._def !== undefined;
 }
 
 // TODO(davideast): This is really a best guess for detecting 
