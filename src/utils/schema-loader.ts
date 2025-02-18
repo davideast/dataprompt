@@ -3,7 +3,7 @@ import path, { join, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import { Genkit } from 'genkit'
-import {jsonSchemaToZod} from 'json-schema-to-zod';
+import { jsonSchemaToZod } from 'json-schema-to-zod';
 import fs from 'node:fs/promises';
 import { Schema } from 'dotprompt';
 
@@ -67,8 +67,8 @@ function extractSchemas(schemaModule: any): SchemaExports {
 // TODO(davideast): Consider moving this into a manager to allow
 // for dynamically loading schemas at runtime. But you actually have 
 // to understand how Genkit manages schemas.
-export async function registerUserSchemas(params: { 
-  genkit: Genkit, 
+export async function registerUserSchemas(params: {
+  genkit: Genkit,
   schemaFile: string,
   rootDir: string,
 }): Promise<SchemaMap> {
@@ -76,7 +76,7 @@ export async function registerUserSchemas(params: {
   const schemas = await loadUserSchemas(params);
   const schemaMap = new Map<string, z.ZodType>()
   for (const [name, schema] of Object.entries(schemas)) {
-    if(genkit.registry.lookupSchema(name) == null) {
+    if (genkit.registry.lookupSchema(name) == null) {
       genkit.defineSchema(name, schema);
       schemaMap.set(name, schema);
     } else {
@@ -87,7 +87,7 @@ export async function registerUserSchemas(params: {
 }
 
 export async function generateAndImportZodSchema(params: {
-  rootDir: string, 
+  rootDir: string,
   schema: Schema
 }) {
   const code = jsonSchemaToZod(params.schema, { module: "esm", type: false });
@@ -121,38 +121,38 @@ export function isZodSchemaInPrompt(schema: any): boolean {
 }
 
 async function resolveZodSchema(params: {
-  schema: any, 
+  schema: any,
   rootDir: string,
   ai: Genkit,
 }): Promise<z.ZodSchema> {
   const { schema, rootDir, ai } = params;
   if (isZodSchemaInPrompt(schema)) {
-      // Case 1:  It's a Zod schema name (string, not a primitive).
-      const foundSchema = ai.registry.lookupSchema(schema);
-      if (!foundSchema?.schema) {
-        throw new Error(`Zod schema with name "${schema}" not found in registry.`);
-      }
-     return foundSchema.schema;
+    // Case 1:  It's a Zod schema name (string, not a primitive).
+    const foundSchema = ai.registry.lookupSchema(schema);
+    if (!foundSchema?.schema) {
+      throw new Error(`Zod schema with name "${schema}" not found in registry.`);
+    }
+    return foundSchema.schema;
   } else if (typeof schema === 'object' && schema !== null) {
-      // Case 2: It's an inline JSON schema (Picoschema).
-      return await generateAndImportZodSchema({ rootDir, schema });
+    // Case 2: It's an inline JSON schema (Picoschema).
+    return await generateAndImportZodSchema({ rootDir, schema });
   } else if (typeof schema === 'string') {
     //Case 3: It's a string and a primitive
     if (schema === 'string') {
-        return z.string();
+      return z.string();
     }
     if (schema === 'number') {
-        return z.number();
+      return z.number();
     }
-     if (schema === 'boolean') {
-        return z.boolean();
+    if (schema === 'boolean') {
+      return z.boolean();
     }
-     if (schema === 'integer') {
-        return z.number().int(); //Zod uses .int() to create an integer schema from a number
+    if (schema === 'integer') {
+      return z.number().int(); //Zod uses .int() to create an integer schema from a number
     }
     throw new Error(`Unknown primitive schema type: ${schema}`);
   }
-    else {
-      throw new Error(`Invalid schema definition: ${JSON.stringify(schema)}`);
+  else {
+    throw new Error(`Invalid schema definition: ${JSON.stringify(schema)}`);
   }
 }

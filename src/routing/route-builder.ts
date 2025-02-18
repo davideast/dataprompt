@@ -4,7 +4,6 @@ import { PluginRegistry } from '../core/registry.js';
 import { SchemaMap } from '../utils/schema-loader.js';
 import { DatapromptRoute } from './server.js';
 import { createPromptFlow, FlowDefinition, FlowInputSchema } from './flow-builder.js';
-// import { resolveZodSchema } from '../utils/schema-loader.js';
 
 export async function createRoute(params: {
   ai: Genkit;
