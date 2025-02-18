@@ -2,26 +2,18 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as ts from 'typescript';
-import { fileURLToPath } from 'url'; // Import fileURLToPath
+import { fileURLToPath } from 'url';
 
 const extensions = [".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".jsx", ".tsx"];
 const typeExtensions = [".d.ts", ".d.mts", ".d.cts"];
 
-// --- Utility Functions ---
-
-/**
- * Resolves a file path, handling various extensions and index files.
- */
+// --- Utility Functions --- (Remain Unchanged)
 async function resolveFile(filePath: string, currentDir: string): Promise<string | null> {
     const absolutePath = path.resolve(currentDir, filePath);
-
-    // 1. Try the path exactly as provided.
     try {
         await fs.access(absolutePath);
         return absolutePath;
     } catch { }
-
-    // 2. If .js, .cjs, or .mjs, try .ts, .cts, .mts, .tsx, .jsx
     const ext = path.extname(absolutePath);
     if ([".js", ".cjs", ".mjs"].includes(ext)) {
         const tsExtensions = [".ts", ".cts", ".mts", ".tsx", ".jsx"];
@@ -33,8 +25,6 @@ async function resolveFile(filePath: string, currentDir: string): Promise<string
             } catch { }
         }
     }
-
-    // 3.  If no extension, try all extensions.
     if (ext === '') {
         for (const ext of extensions) {
             const fullPath = absolutePath + ext;
@@ -44,8 +34,6 @@ async function resolveFile(filePath: string, currentDir: string): Promise<string
             } catch { }
         }
     }
-
-    // 4. Try as a directory with index file, for all extensions.
     for (const ext of extensions) {
         const indexPath = path.join(absolutePath, `/index${ext}`);
         try {
@@ -53,19 +41,13 @@ async function resolveFile(filePath: string, currentDir: string): Promise<string
             return indexPath;
         } catch { }
     }
-
-    return null; // File not found
+    return null;
 }
 
-/**
- * Resolves type definitions for external modules (e.g., from node_modules/@types or package.json).
- */
 async function resolveTypeDefinition(moduleName: string, currentDir: string): Promise<string | null> {
     const typesPackagePath = path.resolve(currentDir, 'node_modules', '@types', moduleName);
     const moduleIndexPath = path.resolve(currentDir, 'node_modules', moduleName, 'index.d.ts');
     const modulePackageJson = path.resolve(currentDir, 'node_modules', moduleName, 'package.json');
-
-    // Check @types first
     for (const typeExt of typeExtensions) {
         const checkPath = typesPackagePath + typeExt
         try {
@@ -78,8 +60,6 @@ async function resolveTypeDefinition(moduleName: string, currentDir: string): Pr
         await fs.access(typesIndexPath);
         return typesIndexPath;
     } catch { }
-
-    // If not in @types, try the module's own index.d.ts
     for (const typeExt of typeExtensions) {
         const checkPath = moduleIndexPath + typeExt
         try {
@@ -87,14 +67,11 @@ async function resolveTypeDefinition(moduleName: string, currentDir: string): Pr
             return checkPath;
         } catch { }
     }
-
-    // Try using the package.json types or typing property.
     try {
         const packageJson = JSON.parse(await fs.readFile(modulePackageJson, 'utf-8'));
         const typesPath = packageJson.types || packageJson.typings;
         if (typesPath) {
             const resolvedTypesPath = path.resolve(path.dirname(modulePackageJson), typesPath);
-
             if (path.extname(resolvedTypesPath) === '') {
                 for (const typeExt of typeExtensions) {
                     const checkPath = resolvedTypesPath + typeExt;
@@ -113,30 +90,20 @@ async function resolveTypeDefinition(moduleName: string, currentDir: string): Pr
     } catch (error) {
         return null;
     }
-
-    return null; // No type definition found
+    return null;
 }
 
-/**
- * Removes comments (both single-line and multi-line) from the given code.
- */
 function removeComments(code: string): string {
-    code = code.replace(/\/\/.*$/gm, ''); // Remove single-line comments
-    code = code.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+    code = code.replace(/\/\/.*$/gm, '');
+    code = code.replace(/\/\*[\s\S]*?\*\//g, '');
     return code;
 }
 
-/**
- * Adds indentation to each line of the given code.
- */
 function indentCode(code: string, level: number = 0): string {
     const indent = '  '.repeat(level);
     return code.split('\n').map(line => indent + line).join('\n');
 }
 
-/**
- * Reads and extracts relevant compiler options from tsconfig.json.
- */
 async function getTsConfigContext(currentDir: string): Promise<string> {
     const tsConfigPath = path.resolve(currentDir, 'tsconfig.json');
     try {
@@ -162,69 +129,19 @@ async function getTsConfigContext(currentDir: string): Promise<string> {
         return `/* --- TSCONFIG.JSON CONTEXT: NOT FOUND OR ERROR READING --- */\n`;
     }
 }
+// --- Core Logic (Modified) ---
 
-/**
- * Gets the main entry points from tsconfig.json's "include" field.
- * Handles globs and expands them to concrete file paths.
- */
-async function getEntryPoints(currentDir: string): Promise<string[]> {
-    const tsConfigPath = path.resolve(currentDir, 'tsconfig.json');
-    try {
-        const tsConfigContent = await fs.readFile(tsConfigPath, 'utf-8');
-        const tsConfig = JSON.parse(tsConfigContent);
-        const includeGlobs = tsConfig.include;
-
-        if (!includeGlobs || !Array.isArray(includeGlobs)) {
-            return [];
-        }
-
-        const entryPoints: string[] = [];
-        for (const globPattern of includeGlobs) {
-            const expandedPaths = await expandGlob(globPattern, currentDir);
-            entryPoints.push(...expandedPaths);
-        }
-
-        // Deduplicate entry points
-        return [...new Set(entryPoints)];
-
-    } catch (error) {
-        console.error("Error reading or parsing tsconfig.json:", error);
-        return [];
-    }
-}
-
-/**
- * Expands a glob pattern to a list of file paths.  Uses the TypeScript compiler API.
- */
-async function expandGlob(globPattern: string, currentDir: string): Promise<string[]> {
-    const compilerOptions: ts.CompilerOptions = {
-        allowJs: true, // Allow processing of JS files
-        // Add other necessary compiler options here, if needed
-    };
-    const host = ts.sys; // Use the TypeScript system host
-
-    const results = ts.parseJsonConfigFileContent(
-        { include: [globPattern] }, // Minimal config for glob expansion
-        host,
-        currentDir,
-        compilerOptions
-    );
-    return results.fileNames;
-}
-
-/**
- * Processes a single file, including its imports and type definitions.
- */
 async function processFile(filePath: string, currentDir: string, visited: Set<string>, depth: number, maxDepth: number, removeCommentsFlag: boolean, isEntryPoint: boolean = false): Promise<string> {
     if (depth > maxDepth) {
         return '';
     }
 
-    const resolvedPath = await resolveFile(filePath, currentDir);
+    let resolvedPath = await resolveFile(filePath, currentDir);
     if (!resolvedPath) {
         console.error(`Error: File not found: ${filePath}`);
         return `/* Error: File not found: ${filePath} */\n`;
     }
+
 
     if (visited.has(resolvedPath)) {
         return `/* Already included: ${resolvedPath} */\n`;
@@ -254,8 +171,14 @@ async function processFile(filePath: string, currentDir: string, visited: Set<st
         const importPath = match[1];
 
         if (importPath.startsWith('.') || importPath.startsWith('/')) {
-            // Local dependency
-            importPromises.push(processFile(importPath, path.dirname(resolvedPath), visited, depth + 1, maxDepth, removeCommentsFlag));
+            // Local dependency:  Resolve *before* taking dirname
+            const resolvedImportPath = await resolveFile(importPath, path.dirname(resolvedPath));
+            if (resolvedImportPath) {
+                importPromises.push(processFile(resolvedImportPath, path.dirname(resolvedImportPath), visited, depth + 1, maxDepth, removeCommentsFlag));
+            } else {
+                result += `/* Error: Could not resolve import: ${importPath} */\n`;
+            }
+
         } else {
             // External module - try to find type definitions
             const typeDefPath = await resolveTypeDefinition(importPath, path.dirname(resolvedPath));
@@ -266,7 +189,7 @@ async function processFile(filePath: string, currentDir: string, visited: Set<st
                         typeDefContent = removeComments(typeDefContent);
                     }
                     result += `/* --- START TYPE DEFINITIONS: ${importPath} (from ${typeDefPath}) --- */\n`;
-                    result += indentCode(typeDefContent, 1); // Indent type definitions
+                    result += indentCode(typeDefContent, 1);
                     result += `\n/* --- END TYPE DEFINITIONS: ${importPath} --- */\n\n`;
                 } catch (err) {
                     console.error(`Error reading type definition file ${typeDefPath}:`, err);
@@ -280,22 +203,18 @@ async function processFile(filePath: string, currentDir: string, visited: Set<st
 
     const importedContents = await Promise.all(importPromises);
     result += importedContents.join('');
-    result = result.replace(/;+$/, ''); // Remove trailing semicolons
+    result = result.replace(/;+$/, '');
 
-    result += `/* --- END IMPORTS --- */\n`
+    result += `/* --- END IMPORTS --- */\n`;
     result += `/* --- CODE --- */\n`;
-     // Remove import statements from the main code section
     let codeWithoutImports = fileContent.replace(importRegex, '');
-    codeWithoutImports = codeWithoutImports.replace(/^\s*;+/, ''); // Remove leading semicolons.
+    codeWithoutImports = codeWithoutImports.replace(/^\s*;+/, '');
     result += indentCode(codeWithoutImports);
     result += `\n/* --- END FILE: ${resolvedPath} --- */\n\n`;
 
     return result;
 }
 
-/**
- * Collects TypeScript errors and the files that contain them.
- */
 async function collectErrorsAndFiles(tsconfigPath: string): Promise<{ errors: string[], files: string[] }> {
     const configFileName = path.resolve(tsconfigPath);
     const configFile = ts.readConfigFile(configFileName, ts.sys.readFile);
@@ -343,11 +262,8 @@ async function collectErrorsAndFiles(tsconfigPath: string): Promise<{ errors: st
     return { errors, files: Array.from(files) };
 }
 
-/**
- * Main function to process files based on command-line arguments.
- */
 async function main() {
-    let inputFile = ''; //  Used to exclude the tool itself
+    let inputFile = '';
     let outputFile = '';
     let maxDepth = Infinity;
     let removeCommentsFlag = false;
@@ -376,8 +292,8 @@ async function main() {
                 removeCommentsFlag = true;
                 break;
             default:
-                 if (!inputFile) {
-                  inputFile = arg; // Still capture for potential error message consistency
+                if (!inputFile) {
+                  inputFile = arg;
                 } else {
                   console.error("Invalid arguments. Usage: context [-o output_file] [-d max_depth] [-c] [--remove-comments] [input_file]");
                   process.exit(1);
@@ -387,7 +303,6 @@ async function main() {
 
     const currentDir = process.cwd();
     const tsconfigPath = path.resolve(currentDir, 'tsconfig.json');
-    // Use import.meta.url and fileURLToPath to get __filename equivalent in ESM
     const toolFilePath = path.resolve(fileURLToPath(import.meta.url));
 
     if (checkMode) {
@@ -400,10 +315,9 @@ async function main() {
             errorOutput += "/* --- END TYPESCRIPT ERRORS --- */\n\n";
 
             let filesOutput = "/* --- FILES WITH ERRORS --- */\n";
-            const visited: Set<string> = new Set(); // Keep track of visited files.
+            const visited: Set<string> = new Set();
             for (const file of files) {
-                // Recursively process each file and its imports.
-                 if (file !== toolFilePath) { // Exclude the tool itself
+                 if (file !== toolFilePath) {
                     filesOutput += await processFile(file, currentDir, visited, 0, Infinity, removeCommentsFlag);
                  }
             }
@@ -416,54 +330,48 @@ async function main() {
                 console.log(`Output written to ${outputFile}`);
             } else {
                 console.log(finalOutput);
-							}
-							process.exit(1); // Exit with error code
-					} else {
-							console.log("No TypeScript errors found.");
-							if (outputFile) {
-									await fs.writeFile(outputFile, "No TypeScript errors found.", 'utf-8');
-							}
-							process.exit(0);
-					}
-	
-			} else {
-					// --- Bundling behavior (now processes all entry points) ---
-					const visited = new Set<string>();
-					let bundledCode = await getTsConfigContext(currentDir);
-					const entryPoints = await getEntryPoints(currentDir);
-	
-	
-					if (entryPoints.length === 0) {
-							console.error("No entry points found in tsconfig.json's 'include' field.");
-							process.exit(1);
-					}
-	
-					// Filter out the tool itself from processing.  Crucially, compare *absolute* paths.
-					const filteredEntryPoints = entryPoints.filter(entryPoint => {
-							const absoluteEntryPoint = path.resolve(currentDir, entryPoint);
-							return absoluteEntryPoint !== toolFilePath;
-					});
-	
-					for (const entryPoint of filteredEntryPoints) {
-							bundledCode += await processFile(entryPoint, currentDir, visited, 0, maxDepth, removeCommentsFlag, true);
-					}
-	
-					if (outputFile) {
-							try {
-									await fs.writeFile(outputFile, bundledCode, 'utf-8');
-									console.log(`Output written to ${outputFile}`);
-							} catch (err) {
-									console.error(`Error writing to output file ${outputFile}:`, err);
-									process.exit(1);
-							}
-					} else {
-							console.log(bundledCode);
-					}
-			}
-	}
-	
-	main().catch(err => {
-			console.error("An unexpected error occurred:", err);
-			process.exit(1);
-	});
-	
+            }
+            process.exit(1);
+        } else {
+            console.log("No TypeScript errors found.");
+            if (outputFile) {
+                await fs.writeFile(outputFile, "No TypeScript errors found.", 'utf-8');
+            }
+            process.exit(0);
+        }
+
+    } else {
+        // --- Bundling behavior (Start at inputFile) ---
+        const visited = new Set<string>();
+        let bundledCode = await getTsConfigContext(currentDir);
+
+        if (inputFile) {
+            const resolvedInputFile = path.resolve(currentDir, inputFile);
+             if (resolvedInputFile === toolFilePath) {
+                console.error("Cannot use the context tool itself as the input file.");
+                process.exit(1);
+            }
+            bundledCode += await processFile(resolvedInputFile, currentDir, visited, 0, maxDepth, removeCommentsFlag, true);
+        } else {
+					console.error("Missing input file. Usage: context [-o output_file] [-d max_depth] [-c] [--remove-comments] [input_file]");
+					process.exit(1);
+		 }
+
+		 if (outputFile) {
+				 try {
+						 await fs.writeFile(outputFile, bundledCode, 'utf-8');
+						 console.log(`Output written to ${outputFile}`);
+				 } catch (err) {
+						 console.error(`Error writing to output file ${outputFile}:`, err);
+						 process.exit(1);
+				 }
+		 } else {
+				 console.log(bundledCode);
+		 }
+ }
+}
+
+main().catch(err => {
+ console.error("An unexpected error occurred:", err);
+ process.exit(1);
+});
