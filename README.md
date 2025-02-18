@@ -2,8 +2,6 @@
 
 > Status: Alpha
 
-[![npm version](https://badge.fury.io/js/dataprompt.svg)](https://badge.fury.io/js/dataprompt)
-
 ## Spin up dataprompt in seconds with Project IDX 
 
 <a href="https://idx.google.com/new?template=https%3A%2F%2Fgithub.com%2Fdavideast%2Fdataprompt%2Ftree%2Fmain%2Ftemplate">
