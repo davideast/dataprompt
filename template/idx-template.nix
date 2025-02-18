@@ -5,6 +5,7 @@
   ];
   bootstrap = ''
     mkdir "$out"
+    mkdir "$out"/.idx
     cp ${./dev.nix} "$out/.idx/dev.nix"
     npm init -y
     npx dataprompt create "$out"
