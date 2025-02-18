@@ -61,6 +61,19 @@ npx dataprompt dev
 
 This starts a development server that serves your prompts as a JSON API.
 
+## Example project structure
+
+```
+project/
+├─ prompts/
+│  ├─ hn/
+│  │  ├─ [page].prompt
+│  ├─ hello.prompt
+├─ schema.ts
+├─ datapromp.config.js (optional)
+├─ package.json
+```
+
 ## Scheduled Tasks with node-cron
 
 dataprompt supports triggers to automatically execute prompts. The most common are scheduled tasks using `node-cron`. Unlike file-based routes where the URL of your JSON API is determined by the location of the .prompt file, the `schedule` trigger is useful for background processes that need to execute periodically without a request.
@@ -84,11 +97,7 @@ Analyze these stories from Hacker News.
 {{json news}}
 ```
 
-# Documentation
-
 ## dataprompt CLI and Config
-
-### dataprompt CLI
 
 The dataprompt CLI provides commands to help you develop and manage your dataprompt projects.
 
@@ -98,6 +107,16 @@ The dataprompt CLI provides commands to help you develop and manage your datapro
 ### dataprompt.config.js
 
 The `dataprompt.config.js` file allows you to configure various aspects of dataprompt, such as the prompts directory, schema file, and plugins.
+
+```js
+// dataprompt.config.js
+/** @type {import('dataprompt').DatapromptConfig} */
+export default {
+  promptsDir: 'my-prompts',
+  schemaFile: 'my-schema.ts',
+};
+// This is not needed unless you want to change defaults
+```
 
 #### Config Options
 
@@ -135,7 +154,7 @@ These options are set for the default genkit instance. If you provide your own g
 
 dataprompt extends the [dotprompt](https://github.com/google/dotprompt/) format to add data sources and actions to your prompts. The `data.prompt` property in your YAML frontmatter defines these extensions.
 
-### dotprompt API
+### dotprompt
 
 The dotprompt format defines several properties:
 
@@ -143,6 +162,24 @@ The dotprompt format defines several properties:
 *   `config`: (object) Configuration options for the model, such as temperature.
 *   `input`: (object) Defines the schema for the prompt's input. *dataprompt does not use this directly*, it will dynamically infer it from the `request` object and any data sources that are defined.
 *   `output`: (object) Defines the schema for the prompt's output.
+
+```hbs
+---
+---
+model: googleai/gemini-2.0-flash
+input:
+  # not needed in data.prompt
+  # input is generated from the sources and the request
+  schema: HNStories
+output:
+  schema: HNAnalysisSchema
+---
+
+{{#each page.items as |story|}}
+  - {{story.title}}
+{{/each}}
+---
+```
 
 ### Zod Schemas and the Schema File
 
