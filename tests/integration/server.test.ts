@@ -271,7 +271,7 @@ describe('dataprompt server & store', () => {
       })
     }
   }
-``
+
   it('should create a dataprompt store with default options', async () => {
     expect(store).toBeDefined();
     expect(store.routes.all().size).toBe(promptRequests.size);

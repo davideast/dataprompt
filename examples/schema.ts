@@ -60,6 +60,11 @@ export const HNPageAnalysis = z.object({
   })).describe("Significant changes in themes, topics, or content types between the pages.").optional(),
 });
 
+export const BasicCodeSchema = z.object({
+  code: z.string().describe("Generated code that should never be wrapped in markdown code ticks. It should always be pure formatted code depending on the language."),
+  language: z.string()
+})
+
 export const CodeSchema = z.object({
   rootDir: z.string().describe('The root directory of the code generation. Used in the files object.'),
   code: z.string().describe("Generated code that should never be wrapped in markdown code ticks. It should always be pure formatted TypeScript code."),
