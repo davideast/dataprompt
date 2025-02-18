@@ -40,9 +40,10 @@ export async function createRouteCatalog(params: {
   ai: Genkit;
   promptDir: string;
   registry: PluginRegistry;
-  userSchemas: SchemaMap,
+  userSchemas: SchemaMap;
+  rootDir: string;
 }): Promise<RouteCatalog> {
-  const { ai, promptDir, registry, userSchemas } = params;
+  const { ai, promptDir, registry, userSchemas, rootDir } = params;
   const express: Map<string, DatapromptRoute> = new Map();
   const next: Map<string, DatapromptRoute> = new Map();
   const tasks: Map<string, ScheduledTask> = new Map();
@@ -57,8 +58,9 @@ export async function createRouteCatalog(params: {
         userSchemas,
         expressRoute,
         registry,
+        rootDir,
       });
-      const triggerDef = route.extracted.data.prompt?.trigger;
+      const triggerDef = route.flowDef.data?.prompt?.trigger;
       if (triggerDef) {
         const triggerKeys = Object.keys(triggerDef);
         const provider = triggerKeys.at(0);

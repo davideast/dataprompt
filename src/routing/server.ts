@@ -4,12 +4,10 @@ import { DatapromptStore } from '../core/dataprompt.js';
 import { events } from '../core/events.js';
 import { getLogManager } from '../utils/logging.js';
 import { createPromptFlow, FlowDefinition } from './flow-builder.js';
-import { PromptFile } from '../utils/yaml.js';
 
 export interface DatapromptRoute {
   flowDef: FlowDefinition;
   flow: ReturnType<typeof createPromptFlow>;
-  extracted: PromptFile;
   promptFilePath: string;
   nextRoute: string;
   expressRoute: string;
@@ -43,7 +41,7 @@ function createRouteHandler({
       });
       requestLogger.flowEvent({
         flowName: route.flow.name,
-        inputSchema: route.flowDef.inputSchema,
+        inputSchema: route.flowDef.promptMetadata.input?.schema,
         input: requestContext
       });
       requestLogger.complete()

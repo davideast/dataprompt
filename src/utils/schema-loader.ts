@@ -1,8 +1,11 @@
 import { z } from 'genkit';
-import { join, isAbsolute } from 'node:path';
+import path, { join, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import { Genkit } from 'genkit'
+import {jsonSchemaToZod} from 'json-schema-to-zod';
+import fs from 'node:fs/promises';
+import { Schema } from 'dotprompt';
 
 export interface SchemaExports {
   [key: string]: z.ZodType<any, any, any>;
@@ -50,7 +53,6 @@ async function loadUserSchemas(params: {
 
 function extractSchemas(schemaModule: any): SchemaExports {
   const schemaMap: SchemaExports = {};
-
   for (const key in schemaModule) {
     if (Object.hasOwn(schemaModule, key)) {
       const value = schemaModule[key];
@@ -59,7 +61,6 @@ function extractSchemas(schemaModule: any): SchemaExports {
       }
     }
   }
-
   return schemaMap;
 }
 
@@ -83,4 +84,75 @@ export async function registerUserSchemas(params: {
     }
   }
   return schemaMap;
+}
+
+export async function generateAndImportZodSchema(params: {
+  rootDir: string, 
+  schema: Schema
+}) {
+  const code = jsonSchemaToZod(params.schema, { module: "esm", type: false });
+  const tempFileName = path.resolve(params.rootDir, './.dataprompt_schemas.js');
+  await fs.writeFile(tempFileName, code);
+  try {
+    const module = await import(tempFileName);
+    return module.default;
+  } finally {
+    await fs.unlink(tempFileName);
+  }
+}
+
+// TODO(davideast): This is really a best guess for detecting 
+// if the schema supplied in a dotprompt is a zod, primitive, or picoschema
+export function isZodSchemaInPrompt(schema: any): boolean {
+  const primitiveTypes = ['string', 'number', 'boolean', 'integer'];
+  if (typeof schema === 'string') {
+    // Check if the string is one of the primitive types.
+    if (primitiveTypes.includes(schema.toLowerCase())) {
+      return false; // It's a primitive type, not a Zod schema name.
+    }
+    return true; // It's a string, and *not* a primitive type, so assume Zod schema name.
+  }
+
+  if (typeof schema === 'object' && schema !== null) {
+    return false; // Object indicates an inline schema (not Zod)
+  }
+
+  return false; // Other cases (e.g., missing 'output', 'schema', or an unexpected type)
+}
+
+async function resolveZodSchema(params: {
+  schema: any, 
+  rootDir: string,
+  ai: Genkit,
+}): Promise<z.ZodSchema> {
+  const { schema, rootDir, ai } = params;
+  if (isZodSchemaInPrompt(schema)) {
+      // Case 1:  It's a Zod schema name (string, not a primitive).
+      const foundSchema = ai.registry.lookupSchema(schema);
+      if (!foundSchema?.schema) {
+        throw new Error(`Zod schema with name "${schema}" not found in registry.`);
+      }
+     return foundSchema.schema;
+  } else if (typeof schema === 'object' && schema !== null) {
+      // Case 2: It's an inline JSON schema (Picoschema).
+      return await generateAndImportZodSchema({ rootDir, schema });
+  } else if (typeof schema === 'string') {
+    //Case 3: It's a string and a primitive
+    if (schema === 'string') {
+        return z.string();
+    }
+    if (schema === 'number') {
+        return z.number();
+    }
+     if (schema === 'boolean') {
+        return z.boolean();
+    }
+     if (schema === 'integer') {
+        return z.number().int(); //Zod uses .int() to create an integer schema from a number
+    }
+    throw new Error(`Unknown primitive schema type: ${schema}`);
+  }
+    else {
+      throw new Error(`Invalid schema definition: ${JSON.stringify(schema)}`);
+  }
 }

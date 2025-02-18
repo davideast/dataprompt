@@ -33,7 +33,8 @@ export async function dataprompt(
     promptDir: resolvedConfig.promptsDir,
     ai,
     registry,
-    userSchemas
+    userSchemas,
+    rootDir: resolvedConfig.rootDir,
   });
   const routeManager = createRouteManager(catalog);
   const flowManager = createFlowManager(routeManager);

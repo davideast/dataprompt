@@ -1,10 +1,10 @@
 import { Genkit, z } from 'genkit';
-import { RequestContextSchema, DatapromptFile } from '../core/interfaces.js';
+import { DatapromptFile } from '../core/interfaces.js';
 import { PluginRegistry } from '../core/registry.js';
-import { extractYAML } from '../utils/yaml.js';
-import { SchemaExports, SchemaMap } from '../utils/schema-loader.js';
+import { SchemaMap } from '../utils/schema-loader.js';
 import { DatapromptRoute } from './server.js';
-import { createPromptFlow, FlowDefinition } from './flow-builder.js';
+import { createPromptFlow, FlowDefinition, FlowInputSchema } from './flow-builder.js';
+// import { resolveZodSchema } from '../utils/schema-loader.js';
 
 export async function createRoute(params: {
   ai: Genkit;
@@ -12,43 +12,48 @@ export async function createRoute(params: {
   userSchemas: SchemaMap;
   expressRoute: string;
   registry: PluginRegistry;
+  rootDir: string;
 }): Promise<DatapromptRoute> {
   const { ai, file, userSchemas, expressRoute, registry } = params;
-  const { path: routePath, content: fileContent, nextRoute } = file;
-  const extracted = await extractYAML(fileContent, userSchemas, registry);
-  const { data, options, template } = extracted;
-
+  const promptMetadata = await ai.registry
+    .dotprompt
+    .renderMetadata<Record<string, any>>(file.content);
+  const { template, output } = ai.registry.dotprompt.parse(file.content);
+  if(!promptMetadata.input) {
+    promptMetadata.input = {
+      schema: z.object({})
+    }
+  }
+  // TODO(davideast): support other input types for flows
+  // other than the request: RequestContext
+  // ...promptMetadata.input?.schema?.shape,
+  promptMetadata.input.schema = FlowInputSchema;
   // replace / with _ for flow names not to break the genkit registry
-  const flowName = routePath.replace(/[\/\[\]]/g, '_').replace(/^_/, '');
-
-  const inputSchema = z.object({
-    request: RequestContextSchema,
-  });
-
-  const outputSchema = options.output?.schema || z.string();
+  const flowName = file.path.replace(/[\/\[\]]/g, '_').replace(/^_/, '');
+  const schema: string = output?.schema as any as string;
+  if(typeof schema !== 'string') {
+    throw new Error(`Only Zod schema names are supported. Provided with ${JSON.stringify(schema, null, 2)}`);
+  }
+  const outputSchema = userSchemas.get(schema)
 
   // Extract the prompt input schema definition for clarity
-  const flowDef: FlowDefinition<typeof inputSchema, typeof outputSchema> = {
+  const flowDef: FlowDefinition = {
     name: flowName,
-    routePath,
-    inputSchema,
+    routePath: file.path,
+    promptMetadata,
     outputSchema,
+    data: promptMetadata.ext?.data,
     template,
-    promptOptions: options,
-    data: {
-      prompt: data.prompt
-    }
   };
 
   // Use the imported createPromptFlow function
   const callableFlow = createPromptFlow(ai, flowDef, registry, file);
 
   return {
-    promptFilePath: routePath,
+    promptFilePath: file.path,
     flow: callableFlow,
-    extracted,
     flowDef,
-    nextRoute,
+    nextRoute: file.nextRoute,
     expressRoute,
   };
 }

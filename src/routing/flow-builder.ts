@@ -1,20 +1,20 @@
 import { Genkit, z } from 'genkit';
-import { PromptMetadata, defineDotprompt } from '@genkit-ai/dotprompt';
+import { PromptMetadata } from 'dotprompt'
 import { DatapromptFile, RequestContext, RequestContextSchema } from '../core/interfaces.js';
 import { PluginRegistry } from '../core/registry.js';
 import { RequestLogger, getLogManager } from '../utils/logging.js';
 import { fetchPromptSources, executeResultActions } from './action-handler.js';
 
-export interface FlowDefinition<
-  InputSchema extends z.ZodTypeAny = z.ZodTypeAny,
-  OutputSchema extends z.ZodTypeAny = z.ZodTypeAny
-> {
+export const FlowInputSchema = z.object({
+  request: RequestContextSchema
+})
+
+export interface FlowDefinition {
   name: string;
   routePath: string;
-  inputSchema: InputSchema;
-  outputSchema?: OutputSchema;
   template: string;
-  promptOptions: Partial<PromptMetadata>;
+  outputSchema?: z.ZodType<any, z.ZodTypeDef, any>;
+  promptMetadata: PromptMetadata;
   data?: {
     prompt?: {
       sources?: Record<string, Record<string, any>>;
@@ -30,7 +30,7 @@ export function createPromptFlow(
   registry: PluginRegistry,
   file: DatapromptFile,
 ) {
-  const { data, name, promptOptions, template, inputSchema, outputSchema } = flowDef;
+  const { data, name, promptMetadata, outputSchema, template } = flowDef;
 
   const logManager = getLogManager()
 
@@ -46,22 +46,18 @@ export function createPromptFlow(
     request: RequestContextSchema,
   });
 
-  const prompt = defineDotprompt(
-    ai.registry,
-    {
-      name,
-      ...promptOptions,
-      input: { schema: promptInputSchema },
-      output: outputSchema ? { schema: outputSchema } : undefined
-    },
-    template
-  );
+  const prompt = ai.definePrompt({
+    name,
+    ...promptMetadata,
+    input: { schema: promptInputSchema },
+    output: outputSchema ? { schema: outputSchema } : undefined,
+  }, template);
 
   return ai.defineFlow(
     {
       name,
-      inputSchema,
-      outputSchema
+      inputSchema: FlowInputSchema,
+      outputSchema,
     },
     async (input: { request: RequestContext }) => {
       const { request } = input;
@@ -84,12 +80,12 @@ export function createPromptFlow(
 
       // 3. Render prompt (for logging)
       if (logger) {
-        const renderedPrompt = await prompt.render({ input: promptInput });
+        const renderedPrompt = await prompt.render(promptInput);
         await logger.promptCompilationEvent(promptInput, renderedPrompt);
       }
 
       // 4. Generate Prompt Output
-      const result = await prompt.generate({ input: promptInput });
+      const result = await prompt(promptInput);
 
       // 5. Execute Result Actions
       await executeResultActions({

@@ -62,20 +62,22 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
-    "@genkit-ai/dotprompt": "^0.9.12",
+    "@genkit-ai/dotprompt": "^1.0.0-rc.5",
     "@genkit-ai/flow": "^0.5.17",
-    "@genkit-ai/googleai": "^0.9.12",
+    "@genkit-ai/googleai": "^1.0.4",
     "@types/supertest": "^6.0.2",
     "date-fns": "^4.1.0",
+    "dotprompt": "^1.0.1",
     "express": "^4.21.2",
     "find-up": "^7.0.0",
     "firebase-admin": "^13.0.2",
     "js-yaml": "^4.1.0",
+    "json-schema-to-zod": "^2.6.0",
     "node-cron": "^3.0.3",
     "path-to-regexp": "^8.2.0",
     "picocolors": "^1.1.1"
   },
   "peerDependencies": {
-    "genkit": "^0.9.12"
+    "genkit": "^1.0.4"
   }
 }
