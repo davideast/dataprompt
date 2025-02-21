@@ -2,7 +2,9 @@ import {
   DataSourceProvider, 
   DataActionProvider, 
   TriggerProvider, 
-  DatapromptPlugin 
+  DatapromptPlugin, 
+  BaseConfig,
+  BaseConfigSchema,
 } from './interfaces.js';
 import { firestorePlugin } from '../plugins/firebase/public.js';
 import { schedulerPlugin } from '../plugins/scheduler/index.js';
@@ -13,6 +15,7 @@ export class PluginRegistry {
   #dataSources = new Map<string, DataSourceProvider>();
   #actions = new Map<string, DataActionProvider>();
   #triggers = new Map<string, TriggerProvider>();
+  #configs = new Map<string, typeof BaseConfigSchema>();
 
   register(plugin: DatapromptPlugin): this;
   register(plugins: DatapromptPlugin[]): this;
@@ -31,6 +34,9 @@ export class PluginRegistry {
   }
 
   registerOne(plugin: DatapromptPlugin) {
+    if(plugin.provideConfig) {
+      this.#configs.set(plugin.name, plugin.provideConfig());
+    }
     if (plugin.createDataSource) {
       this.registerDataSource(plugin.createDataSource());
     }

@@ -26,12 +26,23 @@ export const RequestContextSchema = z.object({
 
 export type RequestContext = z.infer<typeof RequestContextSchema>;
 
-export interface DatapromptPlugin<Config = z.ZodTypeAny> {
+export const BaseConfigSchema = z.object({
+  secrets: z.record(z.string()).optional(),
+}).passthrough();
+
+export type BaseConfig = z.infer<typeof BaseConfigSchema>;
+
+export type PluginConfig = {
+  config: BaseConfig;
+  schema: typeof BaseConfigSchema;
+}
+
+export interface DatapromptPlugin<Config = PluginConfig> {
   name: string;
   createDataSource?(): DataSourceProvider;
   createDataAction?(): DataActionProvider;
   createTrigger?(): TriggerProvider;
-  getConfig?(): Config;
+  provideConfig?(): Config;
 }
 
 export type FetchDataParams = {
