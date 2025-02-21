@@ -203,24 +203,12 @@ function resolveSecrets(params: {
   pluginConfigs: PluginConfig[],
 }) {
   const { userConfig, providedConfig, defaultConfig, pluginConfigs } = params;
-  // const secrets = userConfig?.secrets ??
-  //   providedConfig?.secrets ??
-  //   defaultConfig.secrets;
 
   const secrets = {
     ...defaultConfig.secrets,
     ...providedConfig?.secrets,
     ...userConfig?.secrets,
   };
-
-  console.log(`
-  
-    SECRETS:
-
-    ${JSON.stringify(secrets, null, 2)}
-  
-  `)
-  console.log({ secrets })
 
   return validateSecrets({
     secrets,
