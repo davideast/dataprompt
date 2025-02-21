@@ -50,6 +50,9 @@ export function validateSecrets(params: {
     ...secrets,
     ...pluginSecrets,
   };
+
+  // console.log({ configuredSecrets })
+
   try {
     const parsedSecrets = validationSchema.parse(configuredSecrets);
     _secrets = parsedSecrets;
@@ -88,10 +91,19 @@ export async function resolveConfig(params: {
     providedConfig?.rootDir ??
     await findProjectRootByPackageJson();
 
-  const pluginConfigs = getPluginConfigs(providedConfig);
+  const pluginConfigs = [
+    getPluginConfigs(userConfig),
+    getPluginConfigs(providedConfig)
+  ].flat();
+  const secrets = resolveSecrets({
+    userConfig,
+    providedConfig,
+    defaultConfig: { secrets: process.env as any },
+    pluginConfigs,
+  });
 
   const defaultConfig: Required<DatapromptConfig> = {
-    // TODO(davideast): move default plugins registration from registry here
+    // TODO(davideast): refactor getGenkit() wait until plugins are initialized
     plugins: [],
     // dir name is resolved to root of package.json
     promptsDir: 'prompts',
@@ -99,7 +111,7 @@ export async function resolveConfig(params: {
     // but the built .js not .ts version.
     schemaFile: 'schema.ts',
     genkit: getGenkit(),
-    secrets: process.env as DatapromptSecrets,
+    secrets: process.env as any,
     // root is decided by user config or package.json
     rootDir,
   };
@@ -113,13 +125,6 @@ export async function resolveConfig(params: {
     userConfig,
     providedConfig,
     defaultConfig,
-  });
-
-  const secrets = resolveSecrets({
-    userConfig,
-    providedConfig,
-    defaultConfig,
-    pluginConfigs,
   });
 
   const promptsDir = resolvePromptsDir({
@@ -194,18 +199,28 @@ async function findDatapromptUserConfig() {
 function resolveSecrets(params: {
   userConfig?: Partial<DatapromptConfig>,
   providedConfig?: Partial<DatapromptConfig>,
-  defaultConfig: Required<DatapromptConfig>,
+  defaultConfig: Partial<DatapromptConfig>,
   pluginConfigs: PluginConfig[],
 }) {
   const { userConfig, providedConfig, defaultConfig, pluginConfigs } = params;
-  const secrets = userConfig?.secrets ??
-    providedConfig?.secrets ??
-    defaultConfig.secrets;
+  // const secrets = userConfig?.secrets ??
+  //   providedConfig?.secrets ??
+  //   defaultConfig.secrets;
 
-  // const secrets: Record<string, any> = {
-  //   ...configuredSecrets,
-  //   ...Object.assign({}, ...pluginSecrets),
-  // };
+  const secrets = {
+    ...defaultConfig.secrets,
+    ...providedConfig?.secrets,
+    ...userConfig?.secrets,
+  };
+
+  console.log(`
+  
+    SECRETS:
+
+    ${JSON.stringify(secrets, null, 2)}
+  
+  `)
+  console.log({ secrets })
 
   return validateSecrets({
     secrets,
