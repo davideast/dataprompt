@@ -5,17 +5,19 @@ import {
   DatapromptPlugin, 
   BaseConfig,
   BaseConfigSchema,
+  PluginConfig,
 } from './interfaces.js';
 import { firestorePlugin } from '../plugins/firebase/public.js';
 import { schedulerPlugin } from '../plugins/scheduler/index.js';
 import { fetchPlugin } from '../plugins/fetch/index.js';
+import { z } from 'genkit';
 
 export class PluginRegistry {
   #plugins = new Map<string, DatapromptPlugin>();
   #dataSources = new Map<string, DataSourceProvider>();
   #actions = new Map<string, DataActionProvider>();
   #triggers = new Map<string, TriggerProvider>();
-  #configs = new Map<string, typeof BaseConfigSchema>();
+  #configs = new Map<string, PluginConfig>();
 
   register(plugin: DatapromptPlugin): this;
   register(plugins: DatapromptPlugin[]): this;
@@ -109,7 +111,11 @@ export function createPluginRegistry(plugins: DatapromptPlugin[] = []) {
   const hasOwnScheduler = pluginsToRegister.some(plugin => plugin.name === 'schedule');
   
   if (!hasOwnFirestore) {
-    pluginsToRegister.push(firestorePlugin());
+    pluginsToRegister.push(firestorePlugin({
+      secrets: {
+        GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      }
+    }));
   }
   if (!hasOwnFetch) {
     pluginsToRegister.push(fetchPlugin());

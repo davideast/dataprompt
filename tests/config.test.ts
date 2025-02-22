@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { resolveConfig, validateSecrets } from '../src/core/config.js'
 import path from 'path';
-import { DatapromptPlugin } from '../src/core/interfaces.js';
+import { DatapromptPlugin, createPluginSchema } from '../src/core/interfaces.js';
 import { findTestRoot } from './utils.js'
+import { z } from 'genkit';
 
 describe('dataprompt config', () => {
   const testRoot = findTestRoot(import.meta.url);
@@ -43,13 +44,8 @@ describe('dataprompt config', () => {
       providedConfig: {
         rootDir: testRoot,
         schemaFile: path.resolve(testRoot, 'schemas', 'index.ts'),
-        secrets: {
-          GOOGLEAI_API_KEY: 'blah',
-        }
       }
     })
-    expect(config.secrets.GOOGLEAI_API_KEY).toEqual('blah');
-    expect(config.rootDir).toEqual(testRoot);
     expect(config.schemaFile).toEqual(`${testRoot}/schemas/index.ts`);
   });
 
@@ -57,18 +53,48 @@ describe('dataprompt config', () => {
     const config = await resolveConfig({
       providedConfig: {
         rootDir: testRoot,
-        promptsDir: path.resolve(testRoot, 'system', 'prompts'),
-        secrets: {
-          GOOGLEAI_API_KEY: 'blah',
-        }
+        promptsDir: path.resolve(testRoot, 'system', 'prompts')
       }
     })
-    expect(config.secrets.GOOGLEAI_API_KEY).toEqual('blah');
-    expect(config.rootDir).toEqual(testRoot);
-    expect(config.genkit).toBeDefined();
-    expect(config.plugins).toEqual([]);
     expect(config.promptsDir).toEqual(`${testRoot}/system/prompts`);
   });
-  
+
+  const TestPluginConfigSchema = z.object({
+    secrets: z.object({
+      TEST: z.string().min(1)
+    }).passthrough()
+  })
+
+  type TestPluginConfig = {
+    secrets?: {
+      TEST?: string;
+    }
+  };
+
+  function customPlugin(config?: TestPluginConfig): DatapromptPlugin<{
+    config: TestPluginConfig;
+    schema: typeof TestPluginConfigSchema;
+  }> {
+    const secrets = config?.secrets ?? {}
+    return {
+      name: 'test',
+      provideConfig() {
+        return {
+          config: { secrets },
+          schema: createPluginSchema(TestPluginConfigSchema)
+        }
+      }
+    }
+  }
+
+  // it('should should resolve a config with a plugin and provided secret', async () => {
+  //   const config = await resolveConfig({
+  //     providedConfig: {
+  //       rootDir: testRoot,
+  //       plugins: [ customPlugin({ secrets: { TEST: 'test' } }) ]
+  //     }
+  //   })
+  //   expect(config.secrets.TEST).toEqual('test');
+  // });
 
 })

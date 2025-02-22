@@ -5,12 +5,14 @@ import { googleAI } from '@genkit-ai/googleai';
 import { dateFormat } from '../utils/helpers/date-format.js';
 import { pathToFileURL } from 'url';
 import { findUp } from 'find-up';
-import { BaseConfig, BaseConfigSchema, DatapromptPlugin } from './interfaces.js';
+import { BaseConfig, BaseConfigSchema, DatapromptPlugin, createPluginSchema } from './interfaces.js';
+
+z.record(z.string(), z.string())
 
 const SecretsSchema = z.object({
   GOOGLEAI_API_KEY: z.string().min(1),
   // GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1),
-}).partial();
+}).passthrough();
 
 export type DatapromptSecrets = z.infer<typeof SecretsSchema>;
 
@@ -19,19 +21,19 @@ export type DatapromptConfig = {
   plugins?: DatapromptPlugin[];
   promptsDir?: string;
   schemaFile?: string;
-  secrets?: DatapromptSecrets;
+  secrets?: BaseConfig['secrets'];
   rootDir?: string;
 };
 
 let aiInstance: Genkit | null = null;
-let _secrets: DatapromptSecrets | null = null;
+let _secrets: BaseConfig['secrets'] | null = null;
 
 export function validateSecrets(params: {
   secrets: BaseConfig['secrets'],
   pluginConfigs?: PluginConfig[],
 }) {
   const { secrets, pluginConfigs } = params;
-  let validationSchema = SecretsSchema.passthrough();
+  let validationSchema = BaseConfigSchema;
   let pluginSecrets: Record<string, any> = {};
 
   if (pluginConfigs != null) {
@@ -40,6 +42,7 @@ export function validateSecrets(params: {
         validationSchema = validationSchema.merge(schema);
       }
     }
+    validationSchema = validationSchema.merge(SecretsSchema)
     pluginSecrets = Object.assign(
       {}, 
       ...pluginConfigs.map((config) => config.config.secrets)
@@ -51,12 +54,10 @@ export function validateSecrets(params: {
     ...pluginSecrets,
   };
 
-  // console.log({ configuredSecrets })
-
   try {
     const parsedSecrets = validationSchema.parse(configuredSecrets);
-    _secrets = parsedSecrets;
-    return parsedSecrets;
+    _secrets = parsedSecrets.secrets;
+    return parsedSecrets.secrets;
   } catch (error) {
     if (error instanceof z.ZodError) {
       error.errors.forEach((err) => {
@@ -150,7 +151,7 @@ export async function resolveConfig(params: {
     genkit,
     plugins,
     promptsDir,
-    secrets,
+    secrets: secrets ?? defaultConfig.secrets,
     rootDir,
   };
 }
@@ -269,13 +270,13 @@ export function getGenkit({ provider }: Partial<{
   provider: string;
 }> = { provider: 'googleai' }) {
   if (!aiInstance) {
-    const { GOOGLEAI_API_KEY: apiKey } = getSecrets();
-    if (!apiKey) {
+    const secrets = getSecrets();
+    if (!secrets?.GOOGLEAI_API_KEY) {
       throw new Error(`API key for provider "${provider}" not found in environment variables.  Make sure GOOGLEAI_API_KEY is set.`);
     }
     aiInstance = genkit({
       plugins: [
-        googleAI({ apiKey })
+        googleAI({ apiKey: secrets.GOOGLEAI_API_KEY })
       ],
     });
     aiInstance.defineHelper('dateFormat', dateFormat);
