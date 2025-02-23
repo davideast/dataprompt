@@ -1,5 +1,5 @@
 import { RequestContext } from '../../core/interfaces.js';
-import { DataSourceProvider, DatapromptPlugin } from '../../core/interfaces.js';
+import { DataSourceProvider, DatapromptPlugin } from '../../plugins/interfaces.js';
 
 export interface FetchConfig {
   url: string; 

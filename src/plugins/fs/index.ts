@@ -4,13 +4,46 @@ import os from 'os';
 import { FileSystemPluginConfig, FileSystemReadConfig, FileSystemWriteConfig, WriteOperationType } from './types.js'
 import { fetchData } from './source.js';
 import { execute } from './actions.js';
+import { RequestContext, DatapromptFile } from '../../core/interfaces.js';
 import {
   DataSourceProvider,
   DataActionProvider,
   DatapromptPlugin,
-  RequestContext,
-  DatapromptFile,
-} from '../../core/interfaces.js';
+} from '../../plugins/interfaces.js';
+import { z } from 'genkit';
+import { createPlugin } from '../../plugins/index.js';
+
+const fsPlug = createPlugin<z.AnyZodObject, FileSystemPluginConfig>({
+  name: 'fs',
+  schema: z.object({ }),
+  action(config) {
+    const sandboxPath = createSandboxDirectory(config);
+    return {
+      name: 'fs',
+      execute(params: {
+        request: RequestContext;
+        config: Record<WriteOperationType, FileSystemWriteConfig | FileSystemWriteConfig[]>;
+        promptSources: Record<string, any>;
+        file: DatapromptFile;
+      }): Promise<void> {
+        return execute(params, sandboxPath)
+      },
+    };
+  },
+  source(config) {
+    const sandboxPath = createSandboxDirectory(config);
+    return {
+      name: 'fs',
+      async fetchData(params: {
+        request: RequestContext;
+        config: string | FileSystemReadConfig;
+        file: DatapromptFile;
+      }): Promise<Record<string, any> | Buffer | string> {
+        return fetchData(params, sandboxPath);
+      },
+    };
+  }
+})
 
 export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptPlugin {
   const name = 'fs';

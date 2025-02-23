@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '../src/core/config.js'
-import { DatapromptPlugin } from '../src/core/interfaces.js';
+import { DatapromptPlugin } from '../src/plugins/interfaces.js';
 import { findTestRoot } from './utils.js'
 import { z } from 'genkit';
 import path from 'path';

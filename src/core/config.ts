@@ -5,7 +5,7 @@ import { googleAI } from '@genkit-ai/googleai';
 import { dateFormat } from '../utils/helpers/date-format.js';
 import { pathToFileURL } from 'url';
 import { findUp } from 'find-up';
-import { DatapromptPlugin } from './interfaces.js';
+import { DatapromptPlugin } from '../plugins/interfaces.js';
 
 const SecretsSchema = z.object({
   GOOGLEAI_API_KEY: z.string().min(1),

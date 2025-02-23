@@ -3,7 +3,7 @@ import {
   DataActionProvider, 
   TriggerProvider, 
   DatapromptPlugin,
-} from './interfaces.js';
+} from '../plugins/interfaces.js';
 import { firestorePlugin } from '../plugins/firebase/public.js';
 import { schedulerPlugin } from '../plugins/scheduler/index.js';
 import { fetchPlugin } from '../plugins/fetch/index.js';

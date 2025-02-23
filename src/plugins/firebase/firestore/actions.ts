@@ -1,6 +1,6 @@
 import { Firestore } from 'firebase-admin/firestore';
 import { FirestoreWriteOperation, FirestoreBatchConfig } from './types.js'
-import { RequestContext } from '../../../core/interfaces.js';
+import { RequestContext } from '../../../plugins/interfaces.js';
 
 type WriteOperation = 'set' | 'merge' | 'update' | 'push' | 'pushMerge';
 type OperationType = WriteOperation | 'delete';
