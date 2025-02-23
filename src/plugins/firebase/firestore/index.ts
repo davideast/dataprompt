@@ -6,17 +6,13 @@ import { fetchData } from './source.js'
 import { execute } from './actions.js'
 import { FirebasePluginConfig } from '../types.js';
 
-export const FirestorePluginConfigSchema = z.object({
-  secrets: z.object({
-    GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1)
-  })
-})
-
 const FirestorePluginSecrets = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1)
-})
+});
 
-export function firestorePlugin(config?: FirebasePluginConfig): DatapromptPlugin {
+export function firestorePlugin(
+  config?: FirebasePluginConfig
+): DatapromptPlugin<typeof FirestorePluginSecrets> {
   const name = 'firestore'
   const app = getFirebaseApp(config)
   const db = getFirestore(app)

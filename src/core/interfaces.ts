@@ -26,27 +26,15 @@ export const RequestContextSchema = z.object({
 
 export type RequestContext = z.infer<typeof RequestContextSchema>;
 
-// export type PluginConfig = {
-//   config: BaseConfig;
-//   schema: ReturnType<typeof createPluginSchema> | undefined;
-// }
-
-// export function createPluginSchema(baseSchema: z.AnyZodObject): typeof BaseConfigSchema {
-//   return z.object({
-//     ...baseSchema.shape,
-//     secrets: z.record(z.string(), z.string()).optional(),
-//   }).passthrough();
-// }
-
-export interface DatapromptPlugin {
+export interface DatapromptPlugin<Schema extends z.AnyZodObject = z.AnyZodObject> {
   name: string;
   createDataSource?(): DataSourceProvider;
   createDataAction?(): DataActionProvider;
   createTrigger?(): TriggerProvider;
   provideSecrets?(): {
-    secrets: Record<string, any>;
-    schema?: z.AnyZodObject;
-  }
+    secrets: Partial<z.infer<Schema>>;
+    schema?: Schema;
+  } | undefined;
 }
 
 export type FetchDataParams = {

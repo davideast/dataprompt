@@ -70,17 +70,19 @@ describe('dataprompt config', () => {
     TEST: z.string().min(1)
   })
 
+  type TestPluginSecrets = typeof TestPluginSecretsSchema;
+
   type TestPluginConfig = {
     secrets?: z.infer<typeof TestPluginSecretsSchema>
   };
 
-  function customPlugin(config?: TestPluginConfig): DatapromptPlugin {
+  function customPlugin(config?: TestPluginConfig): DatapromptPlugin<TestPluginSecrets> {
     const secrets = config?.secrets ?? {}
     return {
       name: 'test',
       provideSecrets() {
         return {
-          secrets,
+          secrets: { T}
           schema: TestPluginSecretsSchema
         }
       }

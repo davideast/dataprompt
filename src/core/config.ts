@@ -164,7 +164,12 @@ function getPluginSecrets(config: Partial<DatapromptConfig> | undefined): Requir
   const plugins = config?.plugins ?? [];
   for (const plugin of plugins) {
     if (plugin.provideSecrets) {
-      const { secrets, schema } = plugin.provideSecrets();
+      let provided = plugin.provideSecrets();
+      if(!provided) {
+        console.warn(`Plugin ${plugin.name} did not return any secrets.`);
+        continue;
+      }
+      const { secrets, schema } = provided;
       // Check if is ZodObject
       if (!(schema instanceof z.ZodObject)) {
         console.warn(`Plugin ${plugin.name} did not return a ZodObject from provideConfig.`);
