@@ -1,16 +1,15 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { DatapromptConfig, createPromptServer } from '../../src/index.js'
 import path from 'path';
-import { fileURLToPath } from 'url';
 import request from 'supertest';
 import { DatapromptPlugin } from '../../src/core/interfaces.js';
 import type { Server } from 'http'
 import * as fs from 'node:fs';
-import { findUpSync } from 'find-up'
 import { DatapromptStore } from '../../src/core/dataprompt.js';
 import { z } from 'genkit'
 const MODEL = 'googleai/gemini-2.0-flash';
 import { registerUserSchemas } from '../../src/utils/schema-loader.js'
+import { findTestRoot, sleep } from '../utils.js'
 
 // Only used to test the prompt request responses
 export const TestSchema = z.object({
@@ -154,14 +153,6 @@ export const HNSchema = z.object({
 `;
 }
 
-function findTestRoot() {
-  const currentFilePath = fileURLToPath(import.meta.url);
-  return findUpSync('tests', {
-    cwd: path.dirname(currentFilePath),
-    type: 'directory'
-  })!;
-}
-
 function customPlugin(): DatapromptPlugin {
   return {
     name: 'custom',
@@ -187,13 +178,9 @@ function writePromptFiles(params: {
   }
 }
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 describe('dataprompt server & store', () => {
   // Set the rootDir to main /tests dir as the root
-  const testRootDir = findTestRoot()
+  const testRootDir = findTestRoot(import.meta.url)
   // cleared out after all tests are run
   // probably not necessary but we do it anyways
   const promptRequests = createPromptRequests();
@@ -311,7 +298,6 @@ describe('dataprompt server & store', () => {
   describe('prompt requests', async () => {
     for await (let request of promptRequests.values()) {
       requestIt(request);
-      sleep(300)
     }
   });
 });
