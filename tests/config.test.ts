@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
-import { resolveConfig, validateSecrets } from '../src/core/config.js'
-import path from 'path';
-import { DatapromptPlugin, createPluginSchema } from '../src/core/interfaces.js';
+import { describe, expect, it } from 'vitest';
+import { resolveConfig } from '../src/core/config.js'
+import { DatapromptPlugin } from '../src/core/interfaces.js';
 import { findTestRoot } from './utils.js'
 import { z } from 'genkit';
+import path from 'path';
 
 describe('dataprompt config', () => {
   const testRoot = findTestRoot(import.meta.url);
@@ -21,6 +21,7 @@ describe('dataprompt config', () => {
     expect(config.genkit).toBeDefined();
     expect(config.plugins).toEqual([]);
     expect(config.promptsDir).toEqual(`${testRoot}/prompts`);
+    delete process.env.GOOGLEAI_API_KEY;
   });
 
   it('should resolve a default config with a inline secret', async () => {
@@ -43,6 +44,9 @@ describe('dataprompt config', () => {
     const config = await resolveConfig({
       providedConfig: {
         rootDir: testRoot,
+        secrets: {
+          GOOGLEAI_API_KEY: 'test',
+        },
         schemaFile: path.resolve(testRoot, 'schemas', 'index.ts'),
       }
     })
@@ -53,48 +57,65 @@ describe('dataprompt config', () => {
     const config = await resolveConfig({
       providedConfig: {
         rootDir: testRoot,
+        secrets: {
+          GOOGLEAI_API_KEY: 'test',
+        },
         promptsDir: path.resolve(testRoot, 'system', 'prompts')
       }
     })
     expect(config.promptsDir).toEqual(`${testRoot}/system/prompts`);
   });
 
-  const TestPluginConfigSchema = z.object({
-    secrets: z.object({
-      TEST: z.string().min(1)
-    }).passthrough()
+  const TestPluginSecretsSchema = z.object({
+    TEST: z.string().min(1)
   })
 
   type TestPluginConfig = {
-    secrets?: {
-      TEST?: string;
-    }
+    secrets?: z.infer<typeof TestPluginSecretsSchema>
   };
 
-  function customPlugin(config?: TestPluginConfig): DatapromptPlugin<{
-    config: TestPluginConfig;
-    schema: typeof TestPluginConfigSchema;
-  }> {
+  function customPlugin(config?: TestPluginConfig): DatapromptPlugin {
     const secrets = config?.secrets ?? {}
     return {
       name: 'test',
-      provideConfig() {
+      provideSecrets() {
         return {
-          config: { secrets },
-          schema: createPluginSchema(TestPluginConfigSchema)
+          secrets,
+          schema: TestPluginSecretsSchema
         }
       }
     }
   }
 
-  // it('should should resolve a config with a plugin and provided secret', async () => {
-  //   const config = await resolveConfig({
-  //     providedConfig: {
-  //       rootDir: testRoot,
-  //       plugins: [ customPlugin({ secrets: { TEST: 'test' } }) ]
-  //     }
-  //   })
-  //   expect(config.secrets.TEST).toEqual('test');
-  // });
+  it('should should resolve a config with a plugin and provided secret', async () => {
+    const config = await resolveConfig({
+      providedConfig: {
+        secrets: { GOOGLEAI_API_KEY: 'test' },
+        rootDir: testRoot,
+        plugins: [ 
+          customPlugin({ 
+            secrets: { TEST: 'test' }
+          })
+        ]
+      }
+    })
+    expect(config.secrets.TEST).toEqual('test');
+  })
+
+  it('should throw an error when a plugin secret is missing', async () => {
+    try {
+      await resolveConfig({
+        providedConfig: {
+          rootDir: testRoot,
+          plugins: [ 
+            customPlugin()
+          ]
+        }
+      })
+      expect(resolveConfig).toThrow()
+    } catch(error: z.ZodError | any) {
+      expect((error as z.ZodError).errors.length).toBeGreaterThan(1);
+    }
+  })
 
 })

@@ -1,5 +1,5 @@
 import { z } from 'genkit';
-import { DataActionProvider, DataSourceProvider, DatapromptPlugin, createPluginSchema } from '../../../core/interfaces.js';
+import { DataActionProvider, DataSourceProvider, DatapromptPlugin } from '../../../core/interfaces.js';
 import { getFirebaseApp } from '../app.js'
 import { getFirestore } from 'firebase-admin/firestore';
 import { fetchData } from './source.js'
@@ -10,6 +10,10 @@ export const FirestorePluginConfigSchema = z.object({
   secrets: z.object({
     GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1)
   })
+})
+
+const FirestorePluginSecrets = z.object({
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1)
 })
 
 export function firestorePlugin(config?: FirebasePluginConfig): DatapromptPlugin {
@@ -36,10 +40,10 @@ export function firestorePlugin(config?: FirebasePluginConfig): DatapromptPlugin
         }
       }
     },
-    provideConfig() {
+    provideSecrets() {
       return {
-        config: { secrets },
-        schema: createPluginSchema(FirestorePluginConfigSchema)
+        secrets,
+        schema: FirestorePluginSecrets,
       }
     }
   }

@@ -1,5 +1,5 @@
 import { Genkit, z } from 'genkit';
-import { BaseConfig, BaseConfigSchema, RequestContext, DatapromptPlugin } from './interfaces.js';
+import { RequestContext } from './interfaces.js';
 import { PluginRegistry, createPluginRegistry } from './registry.js';
 import { createRouteCatalog } from '../routing/index.js';
 import { createApiServer } from '../routing/server.js';

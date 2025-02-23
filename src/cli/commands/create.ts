@@ -40,7 +40,7 @@ export const flowExports = store.flows.list().reduce((acc, flow, index) => {
     await fs.writeFile(path.join(projectPath, '_dev-flows.ts'), devFlowsContent);
 
     // Create schema.ts
-    const schemaContent = `import { z } from "zod";
+    const schemaContent = `import { z } from "genkit";
 
 export const SharkFact = z.object({
   fact: z.string(),

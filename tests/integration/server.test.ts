@@ -298,7 +298,6 @@ describe('dataprompt server & store', () => {
   describe('prompt requests', async () => {
     for await (let request of promptRequests.values()) {
       requestIt(request);
-      sleep(300)
     }
   });
 });
