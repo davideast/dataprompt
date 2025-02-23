@@ -24,7 +24,6 @@ export interface DatapromptStore {
 export async function dataprompt(
   config?: Partial<DatapromptConfig>
 ): Promise<DatapromptStore> {
-  // const providedConfigs = config?.plugins?.filter(p => p.provideConfig).map(p => p.provideConfig!());
   const resolvedConfig = await resolveConfig({ providedConfig: config });
   const ai = resolvedConfig.genkit;
   const registry = createPluginRegistry(resolvedConfig.plugins);

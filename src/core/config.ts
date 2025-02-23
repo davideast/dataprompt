@@ -28,9 +28,7 @@ export function validateSecrets(params: {
   pluginSecrets?: PluginSecrets[],
 }) {
   const { secrets, pluginSecrets } = params;
-  let validationSchema = z.object({
-    GOOGLEAI_API_KEY: z.string().min(1),
-  }).passthrough();
+  let validationSchema = SecretsSchema;
 
   if (pluginSecrets != null) {
     for (const { schema } of pluginSecrets) {
@@ -38,7 +36,6 @@ export function validateSecrets(params: {
         validationSchema = validationSchema.merge(schema);
       }
     }
-    validationSchema = validationSchema.merge(SecretsSchema)
   }
 
   const configuredSecrets = {

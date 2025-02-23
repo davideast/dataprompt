@@ -66,6 +66,9 @@ describe('dataprompt config', () => {
     expect(config.promptsDir).toEqual(`${testRoot}/system/prompts`);
   });
 
+  // TODO(davideast): Simplify this type clutter when making plugins.
+  // Type safety is important but not at the cost of frustration which
+  // leads to abandonding types altogether.
   const TestPluginSecretsSchema = z.object({
     TEST: z.string().min(1)
   })
@@ -82,7 +85,7 @@ describe('dataprompt config', () => {
       name: 'test',
       provideSecrets() {
         return {
-          secrets: { T}
+          secrets,
           schema: TestPluginSecretsSchema
         }
       }
