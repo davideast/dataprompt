@@ -5,7 +5,7 @@
   "dependencies": {
     "@clack/prompts": "^0.9.1",
     "@genkit-ai/googleai": "^1.0.4",
-    "dataprompt": "file:../dataprompt-0.0.2.tgz",
+    "dataprompt": "file:../dataprompt-0.0.6.tgz",
     "express": "^4.21.0",
     "firebase-admin": "^13.0.0",
     "genkit": "^1.0.4"
