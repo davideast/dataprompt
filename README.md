@@ -43,8 +43,8 @@ data.prompt:
   sources:
     fetch:
       news: https://api.hnpwa.com/v0/news/1.json
-  output:
-    schema: HNAnalysisSchema
+output:
+  schema: HNAnalysisSchema
 ---
 Analyse the articles below.
 
