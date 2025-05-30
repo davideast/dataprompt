@@ -1,34 +1,50 @@
-import { z } from 'zod';
-import { genkit, Genkit } from 'genkit';
+import * as path from 'path';
+import { z } from 'genkit';
+import { genkit, GenkitBeta as Genkit } from 'genkit/beta';
 import { googleAI } from '@genkit-ai/googleai';
 import { dateFormat } from '../utils/helpers/date-format.js';
-import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { findUp } from 'find-up';
 import { DatapromptPlugin } from './interfaces.js';
 
 const SecretsSchema = z.object({
   GOOGLEAI_API_KEY: z.string().min(1),
-  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1),
-});
-
-export type DatapromptSecrets = z.infer<typeof SecretsSchema>;
+}).passthrough();
 
 export type DatapromptConfig = {
   genkit?: Genkit;
   plugins?: DatapromptPlugin[];
   promptsDir?: string;
   schemaFile?: string;
-  secrets?: DatapromptSecrets;
+  secrets?: Record<string, any>;
   rootDir?: string;
 };
 
 let aiInstance: Genkit | null = null;
-let _secrets: DatapromptSecrets | null = null;
+let _secrets: DatapromptConfig['secrets'] = {};
 
-function validateSecrets(secrets: DatapromptSecrets): DatapromptSecrets {
+export function validateSecrets(params: {
+  secrets: DatapromptConfig['secrets'],
+  pluginSecrets?: PluginSecrets[],
+}) {
+  const { secrets, pluginSecrets } = params;
+  let validationSchema = SecretsSchema;
+
+  if (pluginSecrets != null) {
+    for (const { schema } of pluginSecrets) {
+      if (schema) {
+        validationSchema = validationSchema.merge(schema);
+      }
+    }
+  }
+
+  const configuredSecrets = {
+    ...secrets,
+    ...Object.assign({}, ...pluginSecrets?.flatMap(s => s.secrets) ?? [])
+  };
+
   try {
-    const parsedSecrets = SecretsSchema.parse(secrets);
+    const parsedSecrets = validationSchema.parse(configuredSecrets);
     _secrets = parsedSecrets;
     return parsedSecrets;
   } catch (error) {
@@ -56,16 +72,33 @@ async function loadConfigFile(configPath: string): Promise<DatapromptConfig> {
   }
 }
 
-export async function resolveConfig(
-  providedConfig?: Partial<DatapromptConfig>
-): Promise<Required<DatapromptConfig>> {
+export async function resolveConfig(params: {
+  providedConfig?: Partial<DatapromptConfig>,
+}): Promise<Required<DatapromptConfig>> {
+  const { providedConfig } = params;
   const userConfig = await findDatapromptUserConfig();
-  const rootDir = userConfig?.rootDir ?? 
+  const rootDir = userConfig?.rootDir ??
     providedConfig?.rootDir ??
     await findProjectRootByPackageJson();
 
+  const pluginSecrets = [
+    getPluginSecrets(userConfig),
+    getPluginSecrets(providedConfig)
+  ].flat();
+
+  const secrets = resolveSecrets({
+    userConfig,
+    providedConfig,
+    defaultConfig: { 
+      secrets: { 
+        GOOGLEAI_API_KEY: process.env.GOOGLEAI_API_KEY 
+      } 
+    },
+    pluginSecrets,
+  })!;
+
   const defaultConfig: Required<DatapromptConfig> = {
-    // TODO(davideast): move default plugins registration from registry here
+    // TODO(davideast): refactor getGenkit() wait until plugins are initialized
     plugins: [],
     // dir name is resolved to root of package.json
     promptsDir: 'prompts',
@@ -73,26 +106,20 @@ export async function resolveConfig(
     // but the built .js not .ts version.
     schemaFile: 'schema.ts',
     genkit: getGenkit(),
-    secrets: process.env as DatapromptSecrets,
+    secrets,
     // root is decided by user config or package.json
     rootDir,
   };
 
-  const genkit = userConfig?.genkit ?? 
-    providedConfig?.genkit ?? 
+  const genkit = userConfig?.genkit ??
+    providedConfig?.genkit ??
     defaultConfig.genkit;
 
-  const schemaFile = resolveSchemaFile({ 
-    rootDir, 
+  const schemaFile = resolveSchemaFile({
+    rootDir,
     userConfig,
     providedConfig,
     defaultConfig,
-  });
-
-  const secrets = resolveSecrets({ 
-    userConfig, 
-    providedConfig,
-    defaultConfig, 
   });
 
   const promptsDir = resolvePromptsDir({
@@ -118,9 +145,36 @@ export async function resolveConfig(
     genkit,
     plugins,
     promptsDir,
-    secrets,
+    secrets: secrets ?? defaultConfig.secrets,
     rootDir,
   };
+}
+
+type PluginSecrets = {
+  plugin: DatapromptPlugin;
+  secrets: Record<string, any>;
+  schema?: z.AnyZodObject;
+}
+
+function getPluginSecrets(config: Partial<DatapromptConfig> | undefined): Required<PluginSecrets[]> {
+  const pluginSecrets: PluginSecrets[] = [];
+  const plugins = config?.plugins ?? [];
+  for (const plugin of plugins) {
+    if (plugin.provideSecrets) {
+      let provided = plugin.provideSecrets();
+      if(!provided) {
+        console.warn(`Plugin ${plugin.name} did not return any secrets.`);
+        continue;
+      }
+      const { secrets, schema } = provided;
+      // Check if is ZodObject
+      if (!(schema instanceof z.ZodObject)) {
+        console.warn(`Plugin ${plugin.name} did not return a ZodObject from provideConfig.`);
+      }
+      pluginSecrets.push({ plugin, secrets, schema });
+    }
+  }
+  return pluginSecrets
 }
 
 async function findProjectRootByPackageJson() {
@@ -142,12 +196,21 @@ async function findDatapromptUserConfig() {
 function resolveSecrets(params: {
   userConfig?: Partial<DatapromptConfig>,
   providedConfig?: Partial<DatapromptConfig>,
-  defaultConfig: Required<DatapromptConfig>,
+  defaultConfig: Partial<DatapromptConfig>,
+  pluginSecrets: PluginSecrets[],
 }) {
-  const secretConfig = params.userConfig?.secrets ??
-    params.providedConfig?.secrets ??
-    params.defaultConfig.secrets;
-  return validateSecrets(secretConfig);
+  const { userConfig, providedConfig, defaultConfig, pluginSecrets } = params;
+
+  const secrets = {
+    ...defaultConfig.secrets,
+    ...providedConfig?.secrets,
+    ...userConfig?.secrets,
+  };
+
+  return validateSecrets({
+    secrets,
+    pluginSecrets,
+  });
 }
 
 function resolveSchemaFile(params: {
@@ -190,9 +253,11 @@ function resolvePromptsDir(params: {
   }
 }
 
-function getSecrets(secrets?: DatapromptSecrets) {
+function getSecrets() {
   if (!_secrets) {
-    _secrets = validateSecrets(secrets || process.env as DatapromptSecrets);
+    // Will throw an error telling the user what secrets 
+    // are required given the plugin configuration
+    _secrets = validateSecrets({ secrets: {} })
   }
   return _secrets;
 }
@@ -201,16 +266,17 @@ export function getGenkit({ provider }: Partial<{
   provider: string;
 }> = { provider: 'googleai' }) {
   if (!aiInstance) {
-    const { GOOGLEAI_API_KEY: apiKey } = getSecrets();
-    if (!apiKey) {
+    const secrets = getSecrets();
+    if (!secrets?.GOOGLEAI_API_KEY) {
       throw new Error(`API key for provider "${provider}" not found in environment variables.  Make sure GOOGLEAI_API_KEY is set.`);
     }
     aiInstance = genkit({
       plugins: [
-        googleAI({ apiKey })
+        googleAI({ apiKey: secrets.GOOGLEAI_API_KEY })
       ],
     });
     aiInstance.defineHelper('dateFormat', dateFormat);
   }
   return aiInstance;
 }
+

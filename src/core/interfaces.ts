@@ -26,11 +26,15 @@ export const RequestContextSchema = z.object({
 
 export type RequestContext = z.infer<typeof RequestContextSchema>;
 
-export interface DatapromptPlugin {
+export interface DatapromptPlugin<Schema extends z.AnyZodObject = z.AnyZodObject> {
   name: string;
   createDataSource?(): DataSourceProvider;
   createDataAction?(): DataActionProvider;
   createTrigger?(): TriggerProvider;
+  provideSecrets?(): {
+    secrets: Partial<z.infer<Schema>>;
+    schema?: Schema;
+  } | undefined;
 }
 
 export type FetchDataParams = {
