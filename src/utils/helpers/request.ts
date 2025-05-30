@@ -100,7 +100,7 @@ async function requestContextFromString(
     method: "GET", // Default to GET for string URLs
     url: url.toString(),
     query,
-    params: matchResult?.routeParams as Record<string, string | string[]> || {}, // Apply any route params
+    params: matchResult?.routeParams as Record<string, string | string[]> || {},
     headers: {}, // No headers when created from a string
   };
   const result = RequestContextSchema.safeParse(context);

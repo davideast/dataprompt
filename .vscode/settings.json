@@ -4,5 +4,7 @@
   "editor.wordWrap": "on",
   "files.associations": {
       "*.prompt": "handlebars"
-  }
+  },
+  "IDX.aI.enableInlineCompletion": true,
+  "IDX.aI.enableCodebaseIndexing": true
 }
