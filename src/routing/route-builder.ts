@@ -36,17 +36,13 @@ export async function createRoute(params: {
   }
   const outputSchema = userSchemas.get(schema)
 
-  if(promptMetadata.ext?.data == null) {
-    throw new Error(`No data.prompt section found in ${file.path}`);
-  }
-
   // Extract the prompt input schema definition for clarity
   const flowDef: FlowDefinition = {
     name: flowName,
     routePath: file.path,
     promptMetadata,
     outputSchema,
-    data: promptMetadata.ext.data,
+    data: promptMetadata.ext?.data,
     template,
   };
 
