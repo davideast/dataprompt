@@ -4,6 +4,7 @@ import { RequestLogger } from '../utils/logging.js';
 import Handlebars from 'handlebars';
 import { dateFormat } from '../utils/helpers/date-format.js';
 import { processTemplates } from '../utils/helpers/templates.js';
+import { Genkit } from 'genkit';
 
 const handlebars = Handlebars.create();
 handlebars.registerHelper('dateFormat', dateFormat);

@@ -77,6 +77,6 @@
     "picocolors": "^1.1.1"
   },
   "peerDependencies": {
-    "genkit": "^1.0.4"
+    "genkit": "^1.11.0"
   }
 }

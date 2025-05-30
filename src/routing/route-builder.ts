@@ -17,6 +17,7 @@ export async function createRoute(params: {
   const promptMetadata = await ai.registry
     .dotprompt
     .renderMetadata<Record<string, any>>(file.content);
+
   const { template, output } = ai.registry.dotprompt.parse(file.content);
   if(!promptMetadata.input) {
     promptMetadata.input = {
@@ -35,18 +36,27 @@ export async function createRoute(params: {
   }
   const outputSchema = userSchemas.get(schema)
 
+  if(promptMetadata.ext?.data == null) {
+    throw new Error(`No data.prompt section found in ${file.path}`);
+  }
+
   // Extract the prompt input schema definition for clarity
   const flowDef: FlowDefinition = {
     name: flowName,
     routePath: file.path,
     promptMetadata,
     outputSchema,
-    data: promptMetadata.ext?.data,
+    data: promptMetadata.ext.data,
     template,
   };
 
   // Use the imported createPromptFlow function
-  const callableFlow = createPromptFlow(ai, flowDef, registry, file);
+  const callableFlow = createPromptFlow({
+    ai, 
+    flowDef, 
+    registry, 
+    file
+  });
 
   return {
     promptFilePath: file.path,
