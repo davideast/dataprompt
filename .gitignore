@@ -35,6 +35,8 @@ gemini.json
 keys.json
 set_env.sh
 set-env.sh
+*-service-account.json
+*service-account*.json
 
 *.tgz
 context.txt

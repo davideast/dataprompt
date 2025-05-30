@@ -2,7 +2,7 @@ import {
   DataSourceProvider, 
   DataActionProvider, 
   TriggerProvider, 
-  DatapromptPlugin 
+  DatapromptPlugin,
 } from './interfaces.js';
 import { firestorePlugin } from '../plugins/firebase/public.js';
 import { schedulerPlugin } from '../plugins/scheduler/index.js';
@@ -103,7 +103,11 @@ export function createPluginRegistry(plugins: DatapromptPlugin[] = []) {
   const hasOwnScheduler = pluginsToRegister.some(plugin => plugin.name === 'schedule');
   
   if (!hasOwnFirestore) {
-    pluginsToRegister.push(firestorePlugin());
+    pluginsToRegister.push(firestorePlugin({
+      secrets: {
+        GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      }
+    }));
   }
   if (!hasOwnFetch) {
     pluginsToRegister.push(fetchPlugin());

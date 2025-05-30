@@ -1,4 +1,4 @@
-import { Genkit } from 'genkit';
+import { Genkit, z } from 'genkit';
 import { RequestContext } from './interfaces.js';
 import { PluginRegistry, createPluginRegistry } from './registry.js';
 import { createRouteCatalog } from '../routing/index.js';
@@ -24,8 +24,7 @@ export interface DatapromptStore {
 export async function dataprompt(
   config?: Partial<DatapromptConfig>
 ): Promise<DatapromptStore> {
-  const resolvedConfig = await resolveConfig(config);
-
+  const resolvedConfig = await resolveConfig({ providedConfig: config });
   const ai = resolvedConfig.genkit;
   const registry = createPluginRegistry(resolvedConfig.plugins);
   const userSchemas = await registerUserSchemas(resolvedConfig);
@@ -64,7 +63,7 @@ export async function dataprompt(
 export async function createPromptServer(options: {
   config?: DatapromptConfig;
   startTasks?: boolean;
-} = { startTasks: true}) {
+} = { startTasks: true }) {
   const { startTasks, config } = options
   const store = await dataprompt(config);
   const server = await createApiServer({ store, startTasks });

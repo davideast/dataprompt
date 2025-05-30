@@ -2,8 +2,6 @@
 
 > Status: Alpha
 
-[![npm version](https://badge.fury.io/js/dataprompt.svg)](https://badge.fury.io/js/dataprompt)
-
 ## Spin up dataprompt in seconds with Project IDX 
 
 <a href="https://idx.google.com/new?template=https%3A%2F%2Fgithub.com%2Fdavideast%2Fdataprompt%2Ftree%2Fmain%2Ftemplate">
@@ -45,8 +43,8 @@ data.prompt:
   sources:
     fetch:
       news: https://api.hnpwa.com/v0/news/1.json
-  output:
-    schema: HNAnalysisSchema
+output:
+  schema: HNAnalysisSchema
 ---
 Analyse the articles below.
 
@@ -164,7 +162,6 @@ The dotprompt format defines several properties:
 *   `output`: (object) Defines the schema for the prompt's output.
 
 ```hbs
----
 ---
 model: googleai/gemini-2.0-flash
 input:
