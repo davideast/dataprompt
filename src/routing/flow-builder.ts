@@ -24,19 +24,13 @@ export interface FlowDefinition {
   };
 }
 
-export function createPromptFlow(
+export function createPrompt(options: {
   ai: Genkit,
   flowDef: FlowDefinition,
-  registry: PluginRegistry,
-  file: DatapromptFile,
-) {
+}) {
+  const { ai, flowDef } = options;
   const { data, name, promptMetadata, outputSchema, template } = flowDef;
-
-  const logManager = getLogManager()
-
   const sources = data?.prompt?.sources || {};
-  const resultActions = data?.prompt?.result || {};
-
   const promptInputSchema = z.object({
     ...Object.fromEntries(
       Object.entries(sources).flatMap(([sourceName, sourceConfig]) => {
@@ -46,12 +40,26 @@ export function createPromptFlow(
     request: RequestContextSchema,
   });
 
-  const prompt = ai.definePrompt({
+  return ai.definePrompt({
     name,
     ...promptMetadata,
     input: { schema: promptInputSchema },
     output: outputSchema ? { schema: outputSchema } : undefined,
   }, template);
+}
+
+export function createFlow(options: {
+  ai: Genkit,
+  flowDef: FlowDefinition,
+  registry: PluginRegistry,
+  file: DatapromptFile,
+  prompt: ReturnType<typeof createPrompt>,
+}) {
+  const { ai, flowDef, registry, file, prompt } = options;
+  const { data, name, outputSchema } = flowDef;
+  const logManager = getLogManager()
+  const sources = data?.prompt?.sources || {};
+  const resultActions = data?.prompt?.result || {};
 
   return ai.defineFlow(
     {
@@ -101,4 +109,21 @@ export function createPromptFlow(
       return result.output;
     }
   );
+}
+
+export function createPromptFlow(options:{
+  ai: Genkit,
+  flowDef: FlowDefinition,
+  registry: PluginRegistry,
+  file: DatapromptFile,
+}) {
+  const { ai, flowDef, registry, file } = options;
+  const prompt = createPrompt({ ai, flowDef });
+  return createFlow({
+    ai, 
+    flowDef, 
+    registry, 
+    file, 
+    prompt 
+  });
 }
