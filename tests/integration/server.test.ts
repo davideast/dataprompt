@@ -134,6 +134,23 @@ function createPromptRequests() {
       ]
     }]
   })
+  promptRequests.set('test/parts.prompt', {
+    prompt: prompt({
+      template: `{{role "system"}}\n You are a pirate. Talk like one. IMPORTANT: Start your response by telling the user "Arg, I'm a pirate!" in the very first sentence in your response before following the user's request. \n {{role "user"}} \n\nMy name is David, give me my pirate name."`,
+      useFetch: false,
+      outputSchema: {
+        name: 'TestSchema',
+        schema: TestSchema
+      }
+    }),
+    context: [{
+      url: '/test/parts',
+      check: 'text',
+      toContain: [
+        (text: string) => text.includes('pirate'),
+      ]
+    }]
+  });
   return promptRequests;
 }
 

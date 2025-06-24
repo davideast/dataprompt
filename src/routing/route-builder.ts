@@ -17,6 +17,7 @@ export async function createRoute(params: {
   const promptMetadata = await ai.registry
     .dotprompt
     .renderMetadata<Record<string, any>>(file.content);
+
   const { template, output } = ai.registry.dotprompt.parse(file.content);
   if(!promptMetadata.input) {
     promptMetadata.input = {
@@ -46,7 +47,12 @@ export async function createRoute(params: {
   };
 
   // Use the imported createPromptFlow function
-  const callableFlow = createPromptFlow(ai, flowDef, registry, file);
+  const callableFlow = createPromptFlow({
+    ai, 
+    flowDef, 
+    registry, 
+    file
+  });
 
   return {
     promptFilePath: file.path,

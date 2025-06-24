@@ -59,7 +59,7 @@
   "dependencies": {
     "@clack/prompts": "^0.10.0",
     "@genkit-ai/flow": "^0.5.17",
-    "@genkit-ai/googleai": "^1.0.5",
+    "@genkit-ai/googleai": "^1.13.0",
     "date-fns": "^4.1.0",
     "dotprompt": "^1.0.1",
     "express": "^4.21.2",
@@ -72,6 +72,6 @@
     "picocolors": "^1.1.1"
   },
   "peerDependencies": {
-    "genkit": "^1.0.5"
+    "genkit": "^1.13.0"
   }
 }
