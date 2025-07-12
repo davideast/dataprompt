@@ -1,6 +1,7 @@
 import { Genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { RequestContext } from './interfaces.js';
+import { PluginManager } from './plugin.manager.js';
 import { createRouteCatalog } from '../routing/index.js';
 import { createApiServer } from '../routing/server.js';
 import { SchemaMap, registerUserSchemas } from '../utils/schema-loader.js';
@@ -10,9 +11,8 @@ import { TaskManager, createTaskManager } from '../routing/task-manager.js';
 import { dateFormat } from '../utils/helpers/date-format.js';
 import { findUp } from 'find-up';
 import { pathToFileURL } from 'node:url';
+import { DatapromptConfig, DatapromptUserConfig } from './config.js'
 import { ConfigManager } from './config.manager.js';
-import { DatapromptUserConfig, DatapromptConfig } from './config.js';
-import { PluginManager } from './plugin.manager.js';
 
 export interface DatapromptStore {
   generate<Output = any>(url: string | Request | RequestContext): Promise<Output>;
@@ -24,7 +24,6 @@ export interface DatapromptStore {
   userSchemas: SchemaMap;
 }
 
-// Initializes a default Genkit instance if not provided by a user.
 function createDefaultGenkit(config: DatapromptConfig): Genkit {
   const apiKey = config.secrets?.GOOGLEAI_API_KEY;
   if (!apiKey) {
@@ -37,7 +36,6 @@ function createDefaultGenkit(config: DatapromptConfig): Genkit {
   return ai;
 }
 
-// Attempts to load a live Genkit instance from the user's config file.
 async function loadUserGenkitInstance(rootDir: string): Promise<Genkit | undefined> {
   const configPath = await findUp(['dataprompt.config.ts', 'dataprompt.config.js'], { cwd: rootDir });
   if (configPath) {
@@ -71,19 +69,16 @@ export async function dataprompt(
 ): Promise<DatapromptStore> {
   const configManager = new ConfigManager();
   const fileConfig = await configManager.load();
-
   const config = mergeConfigs(fileConfig, programmaticConfig);
-
-  const userGenkit = programmaticConfig?.genkit ?? await loadUserGenkitInstance(config.rootDir);
+  const userGenkit = programmaticConfig?.genkit
+    ?? await loadUserGenkitInstance(config.rootDir);
   const ai = userGenkit || createDefaultGenkit(config);
   const pluginManager = new PluginManager(config);
-
   const userSchemas = await registerUserSchemas({
     genkit: ai,
     schemaFile: config.schemaFile,
     rootDir: config.rootDir
   });
-
   const catalog = await createRouteCatalog({
     promptDir: config.promptsDir,
     ai,
@@ -98,11 +93,16 @@ export async function dataprompt(
 
   return {
     async generate<Output>(url: string | Request | RequestContext) {
-      const { route, request } = await routeManager.getRequest(url);
+      // The generate method uses the RouteManager to find the route
+      // and then directly calls the universal helper to create the context.
+      const { route, request: reqFromManager } = await routeManager.getRequest(url);
       if (!route) {
-        throw new Error(`No route found for ${url}`);
+        throw new Error(`No route found for ${typeof url === 'string' ? url : url.url}`);
       }
-      return route.flow({ request }) as Output;
+
+      // The RouteManager's getRequest handles context creation.
+      // We just need to call the flow with the context it provides.
+      return route.flow({ request: reqFromManager }) as Output;
     },
     routes: routeManager,
     flows: flowManager,

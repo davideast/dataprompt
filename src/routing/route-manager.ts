@@ -1,7 +1,7 @@
 import { DatapromptRoute } from './server.js';
 import { routeMatcher, RouteResult, MatchResult } from './route-matcher.js';
 import { RequestContext } from '../core/interfaces.js';
-import { convertToRequestContext } from '../utils/helpers/request.js';
+import { createRequestContext } from '../utils/helpers/request.js';
 import { RouteCatalog } from './index.js';
 
 export interface RouteManager {
@@ -55,7 +55,7 @@ export function createRouteManager(catalog: RouteCatalog): RouteManager {
         throw new Error(`No flow found for route: ${result.match.matchedRoute}`);
       }
 
-      const request = await convertToRequestContext(url, result.match);
+      const request = await createRequestContext(url, result.match);
 
       return { route, request };
     }
