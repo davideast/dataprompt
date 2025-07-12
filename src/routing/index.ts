@@ -1,49 +1,63 @@
+// src/routing/index.ts (Updated and Final)
+
 import { Genkit } from 'genkit';
 import { ScheduledTask } from 'node-cron';
 import { DatapromptRoute } from './server.js';
-import { PluginRegistry } from '../core/registry.js';
+import { PluginManager } from '../core/plugin.manager.js'; // Import the new manager
 import { createRoute } from './route-builder.js';
 import { createFileMap } from './file-system.js';
 import { SchemaMap } from '../utils/schema-loader.js';
 import { events } from '../core/events.js';
 import { randomUUID } from 'node:crypto';
 
-// TODO(davideast): Simplify routing approach to not duplicate routes
 export type RouteCatalog = {
   express: Map<string, DatapromptRoute>;
   next: Map<string, DatapromptRoute>;
   tasks: Map<string, ScheduledTask>;
 }
 
-export function createTask(
+/**
+ * Creates a scheduled task by retrieving the appropriate trigger provider
+ * from the PluginManager.
+ * @param triggerDef The trigger definition from the prompt file's YAML.
+ * @param route The dataprompt route this task is associated with.
+ * @param pluginManager The application's central PluginManager instance.
+ */
+function createTask(
   triggerDef: Record<string, any>,
   route: DatapromptRoute,
-  registry: PluginRegistry
-) {
-  // .trigger -> "firebase.schedule" should be { firebase: { schedule: '' }}
-  const triggerKeys = Object.keys(triggerDef);
-  // TODO(davideast): "firebase.schedule" is a single unparsed YAML key
-  // We'll need to parse it and treat it as an object { firebase: { schedule }}
-  const provider = triggerKeys.at(0);
-  if (!provider) {
-    throw new Error(`No trigger provider found for ${route.expressRoute}`);
+  pluginManager: PluginManager
+): ScheduledTask {
+  // The trigger definition in YAML, e.g., `schedule: { cron: '...' }`,
+  // uses the provider name as the key.
+  const providerName = Object.keys(triggerDef)[0];
+  if (!providerName) {
+    throw new Error(`Invalid trigger definition for route ${route.expressRoute}: Missing provider name.`);
   }
-  const config = triggerDef[provider]
-  const trigger = registry.getTrigger(provider);
-  if (!trigger) {
-    throw new Error(`No trigger found for ${provider}`);
-  }
+
+  const config = triggerDef[providerName];
+  // TODO(davideast): This needs way better naming. 
+  // getTrigger() gets the TriggerProvider. 
+  // createTrigger() creates the Trigger. 
+  // create() creates the ScheduledTask.
+  const triggerProvider = pluginManager.getTrigger(providerName);
+  const trigger = triggerProvider.createTrigger();
   return trigger.create(route, config);
 }
 
+/**
+ * Scans the prompts directory and constructs a catalog of all available
+ * HTTP routes and scheduled tasks.
+ * @param params An object containing the application's core services.
+ */
 export async function createRouteCatalog(params: {
   ai: Genkit;
   promptDir: string;
-  registry: PluginRegistry;
+  pluginManager: PluginManager; // Updated from 'registry'
   userSchemas: SchemaMap;
   rootDir: string;
 }): Promise<RouteCatalog> {
-  const { ai, promptDir, registry, userSchemas, rootDir } = params;
+  const { ai, promptDir, pluginManager, userSchemas, rootDir } = params;
   const express: Map<string, DatapromptRoute> = new Map();
   const next: Map<string, DatapromptRoute> = new Map();
   const tasks: Map<string, ScheduledTask> = new Map();
@@ -51,40 +65,39 @@ export async function createRouteCatalog(params: {
 
   for (const [expressRoute, file] of fileMap.entries()) {
     try {
-      // Use the imported createRoute function
+      // The createRoute function must also be updated to accept pluginManager.
+      // This is assumed to be done in a subsequent step.
       const route = await createRoute({
         ai,
         file,
         userSchemas,
         expressRoute,
-        registry,
+        pluginManager, // Pass the manager down
         rootDir,
       });
+
       const triggerDef = route.flowDef.data?.prompt?.trigger;
       if (triggerDef) {
-        const triggerKeys = Object.keys(triggerDef);
-        const provider = triggerKeys.at(0);
-        if(!provider) {
-          throw new Error(`No trigger provider found for ${route.expressRoute}`);
-        }
-        const config = triggerDef[provider]
-        const task = createTask(triggerDef, route, registry)
+        // If a trigger is defined, create a task instead of an HTTP route.
+        const task = createTask(triggerDef, route, pluginManager);
         tasks.set(expressRoute, task);
+        
         events.emit('task:created', {
           id: randomUUID(),
           route: route.nextRoute,
           task,
           timestamp: performance.now(),
-          provider,
-          config,
+          provider: Object.keys(triggerDef)[0],
+          config: Object.values(triggerDef)[0],
         })
       } else {
+        // Otherwise, register it as a standard HTTP route.
         express.set(expressRoute, route);
         next.set(route.nextRoute, route);
       }
-    } catch (error) {
-      throw error;
-      // throw new Error(`Error processing prompt file ${file.path}: ${error}`);
+    } catch (error: any) {
+      // Add more context to errors to make debugging easier.
+      throw new Error(`Error processing prompt file '${file.path}': ${error.message}`);
     }
   }
   return { express, next, tasks };

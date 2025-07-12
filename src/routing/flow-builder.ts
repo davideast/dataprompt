@@ -1,20 +1,20 @@
 import { Genkit, z } from 'genkit';
-import { PromptMetadata } from 'dotprompt'
+import { PromptConfig as PromptMetadata } from 'genkit'; 
 import { DatapromptFile, RequestContext, RequestContextSchema } from '../core/interfaces.js';
-import { PluginRegistry } from '../core/registry.js';
+import { PluginManager } from '../core/plugin.manager.js';
 import { RequestLogger, getLogManager } from '../utils/logging.js';
 import { fetchPromptSources, executeResultActions } from './action-handler.js';
 
 export const FlowInputSchema = z.object({
   request: RequestContextSchema
-})
+});
 
 export interface FlowDefinition {
   name: string;
   routePath: string;
   template: string;
   outputSchema?: z.ZodType<any, z.ZodTypeDef, any>;
-  promptMetadata: PromptMetadata;
+  promptMetadata: Partial<PromptMetadata>;
   data?: {
     prompt?: {
       sources?: Record<string, Record<string, any>>;
@@ -24,6 +24,7 @@ export interface FlowDefinition {
   };
 }
 
+// createPrompt now uses the Partial type correctly
 export function createPrompt(options: {
   ai: Genkit,
   flowDef: FlowDefinition,
@@ -40,6 +41,7 @@ export function createPrompt(options: {
     request: RequestContextSchema,
   });
 
+  // The definePrompt function accepts a Partial<PromptMetadata>
   return ai.definePrompt({
     name,
     ...promptMetadata,
@@ -48,14 +50,15 @@ export function createPrompt(options: {
   }, template);
 }
 
+// The rest of the file remains the same...
 export function createFlow(options: {
   ai: Genkit,
   flowDef: FlowDefinition,
-  registry: PluginRegistry,
+  pluginManager: PluginManager,
   file: DatapromptFile,
   prompt: ReturnType<typeof createPrompt>,
 }) {
-  const { ai, flowDef, registry, file, prompt } = options;
+  const { ai, flowDef, pluginManager, file, prompt } = options;
   const { data, name, outputSchema } = flowDef;
   const logManager = getLogManager()
   const sources = data?.prompt?.sources || {};
@@ -74,34 +77,29 @@ export function createFlow(options: {
         logger = logManager.get(request.requestId)
       }
 
-      // 1.  Fetch Data Sources
       const promptSources = await fetchPromptSources({ 
         sources, 
         request, 
         logger, 
-        registry,
+        pluginManager,
         file, 
       });
 
-      // 2. Prepare prompt input (including fetched data)
       const promptInput = { ...promptSources, request };
       
-      // 3. Render prompt (for logging)
       if (logger) {
         const renderedPrompt = await prompt.render(promptInput);
         await logger.promptCompilationEvent(promptInput, renderedPrompt);
       }
 
-      // 4. Generate Prompt Output
       const result = await prompt(promptInput);
 
-      // 5. Execute Result Actions
       await executeResultActions({
         resultActions,
         request,
         promptSources,
         result,
-        registry,
+        pluginManager,
         logger,
         file,
       });
@@ -114,15 +112,15 @@ export function createFlow(options: {
 export function createPromptFlow(options:{
   ai: Genkit,
   flowDef: FlowDefinition,
-  registry: PluginRegistry,
+  pluginManager: PluginManager,
   file: DatapromptFile,
 }) {
-  const { ai, flowDef, registry, file } = options;
+  const { ai, flowDef, pluginManager, file } = options;
   const prompt = createPrompt({ ai, flowDef });
   return createFlow({
     ai, 
     flowDef, 
-    registry, 
+    pluginManager,
     file, 
     prompt 
   });

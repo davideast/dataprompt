@@ -1,5 +1,5 @@
 export { DatapromptRoute } from './routing/server.js';
-export { getGenkit, DatapromptConfig } from './core/config.js'
+export { DatapromptConfig } from './core/config.js'
 export { dataprompt, createPromptServer } from './core/dataprompt.js'
 export { 
   RequestContextSchema, 

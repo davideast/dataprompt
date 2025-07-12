@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
-import { SchemaExports, SchemaMap } from './schema-loader.js';
-import { PluginRegistry } from '../core/registry.js';
+import { SchemaMap } from './schema-loader.js';
+import { PluginManager } from '../core/plugin.manager.js'; // Import the new manager
 import { PromptConfig as PromptMetadata } from 'genkit';
 
 export interface PromptFile {
@@ -15,10 +15,17 @@ export interface PromptFile {
   };
 }
 
+/**
+ * Extracts YAML frontmatter and the prompt template from a .prompt file string.
+ * It also validates the defined sources and actions against the registered plugins.
+ * @param fileContents The raw string content of the .prompt file.
+ * @param userSchemas A map of registered Zod schemas.
+ * @param pluginManager The application's central PluginManager instance.
+ */
 export async function extractYAML(
   fileContents: string,
   userSchemas: SchemaMap,
-  registry: PluginRegistry
+  pluginManager: PluginManager // Updated from 'registry: PluginRegistry'
 ): Promise<PromptFile> {
   try {
     if (!fileContents.includes('---')) {
@@ -33,7 +40,7 @@ export async function extractYAML(
 
     const parts = fileContents.split('---');
     const frontmatter = parts[1];
-    const template = parts[2].trim();
+    const template = parts[2]?.trim() ?? ''; // Ensure template is not undefined
 
     const yamlData = yaml.load(frontmatter);
 
@@ -47,51 +54,29 @@ export async function extractYAML(
         throw new Error('data.prompt must be an object');
       }
 
-      // Validate sources
+      // Validate sources using the PluginManager
       if (promptData?.sources) {
         if (!isPlainObject(promptData.sources)) {
           throw new Error('sources must be an object');
         }
-
-        // Validate each source is registered
         for (const sourceName of Object.keys(promptData.sources)) {
-          try {
-            registry.getDataSource(sourceName); // This throws if not found
-          } catch (e) {
-            const available = Array.from(registry.dataSources);
-            throw new Error(
-              `Unknown data source: "${sourceName}". ` +
-              (available.length > 0
-                ? `Available sources: ${available.join(', ')}`
-                : 'No data sources registered.')
-            );
-          }
+          // This will throw a descriptive error if the provider is not found.
+          pluginManager.getDataSource(sourceName); 
         }
       }
 
-      // Validate result actions
+      // Validate result actions using the PluginManager
       if (promptData?.result) {
         if (!isPlainObject(promptData.result)) {
           throw new Error('result must be an object');
         }
-
-        // Validate each action is registered
         for (const actionName of Object.keys(promptData.result)) {
-          try {
-            registry.getAction(actionName); // This throws if not found
-          } catch (e) {
-            const available = Array.from(registry.actions);
-            throw new Error(
-              `Unknown action: "${actionName}". ` +
-              (available.length > 0
-                ? `Available actions: ${available.join(', ')}`
-                : 'No actions registered.')
-            );
-          }
+          // This will throw a descriptive error if the provider is not found.
+          pluginManager.getAction(actionName);
         }
       }
-
-      // Handle schema resolution like before
+      
+      // Schema resolution logic 
       if (
         isPlainObject(options.output) &&
         typeof options.output.schema === 'string'
@@ -102,7 +87,7 @@ export async function extractYAML(
           options.output.schema = resolvedSchema;
         } else {
           console.warn(
-            `Schema ${schemaName} not found in user schemas. Available schemas: ${Object.keys(userSchemas).join(', ')}`
+            `Schema ${schemaName} not found. Available schemas: ${[...userSchemas.keys()].join(', ')}`
           );
         }
       }
@@ -133,7 +118,7 @@ function isPlainObject(value: any): value is Record<string, any> {
   return (
     typeof value === 'object' &&
     value !== null &&
-    value.constructor === Object &&
-    Object.prototype.toString.call(value) === '[object Object]'
+    !Array.isArray(value) &&
+    value.constructor === Object
   );
 }

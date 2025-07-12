@@ -1,7 +1,6 @@
-import { GenkitBeta as Genkit } from 'genkit/beta';
+import { Genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { RequestContext } from './interfaces.js';
-import { PluginRegistry, createPluginRegistry } from './registry.js';
 import { createRouteCatalog } from '../routing/index.js';
 import { createApiServer } from '../routing/server.js';
 import { SchemaMap, registerUserSchemas } from '../utils/schema-loader.js';
@@ -13,10 +12,11 @@ import { findUp } from 'find-up';
 import { pathToFileURL } from 'node:url';
 import { ConfigManager } from './config.manager.js';
 import { DatapromptUserConfig, DatapromptConfig } from './config.js';
+import { PluginManager } from './plugin.manager.js';
 
 export interface DatapromptStore {
   generate<Output = any>(url: string | Request | RequestContext): Promise<Output>;
-  registry: PluginRegistry;
+  registry: PluginManager;
   routes: RouteManager;
   flows: FlowManager;
   tasks: TaskManager;
@@ -24,7 +24,7 @@ export interface DatapromptStore {
   userSchemas: SchemaMap;
 }
 
-// Initializes the default Genkit instance if the user doesn't provide one.
+// Initializes a default Genkit instance if not provided by a user.
 function createDefaultGenkit(config: DatapromptConfig): Genkit {
   const apiKey = config.secrets?.GOOGLEAI_API_KEY;
   if (!apiKey) {
@@ -39,7 +39,7 @@ function createDefaultGenkit(config: DatapromptConfig): Genkit {
 
 // Attempts to load a live Genkit instance from the user's config file.
 async function loadUserGenkitInstance(rootDir: string): Promise<Genkit | undefined> {
-  const configPath = await findUp(['dataprompt.config.js'], { cwd: rootDir });
+  const configPath = await findUp(['dataprompt.config.ts', 'dataprompt.config.js'], { cwd: rootDir });
   if (configPath) {
     try {
       const userModule = await import(pathToFileURL(configPath).toString());
@@ -53,41 +53,30 @@ async function loadUserGenkitInstance(rootDir: string): Promise<Genkit | undefin
   return undefined;
 }
 
+function mergeConfigs(base: DatapromptConfig, override?: DatapromptUserConfig): DatapromptConfig {
+  if (!override) {
+    return { ...base, secrets: { ...base.secrets }, plugins: [...base.plugins] };
+  }
+  const merged = { ...base, secrets: { ...base.secrets }, plugins: [...base.plugins] };
+  if (override.rootDir) merged.rootDir = override.rootDir;
+  if (override.promptsDir) merged.promptsDir = override.promptsDir;
+  if (override.schemaFile) merged.schemaFile = override.schemaFile;
+  if (override.secrets) Object.assign(merged.secrets, override.secrets);
+  if (override.plugins) merged.plugins.push(...override.plugins);
+  return merged;
+}
+
 export async function dataprompt(
   programmaticConfig?: DatapromptUserConfig
 ): Promise<DatapromptStore> {
-  // Step 1: Load the static configuration from files. 
-  // `fileConfig` is guaranteed to be a valid `DatapromptConfig`.
   const configManager = new ConfigManager();
   const fileConfig = await configManager.load();
 
-  // Step 2: Create the final config by starting with a valid clone of the file-based config.
-  const config: DatapromptConfig = {
-    ...fileConfig,
-    secrets: { ...fileConfig.secrets },
-    plugins: [...fileConfig.plugins]
-  };
+  const config = mergeConfigs(fileConfig, programmaticConfig);
 
-  // Step 3: Explicitly override with programmatic values if they exist.
-  // This is the key change that guarantees type safety.
-  if (programmaticConfig) {
-    if (programmaticConfig.rootDir) config.rootDir = programmaticConfig.rootDir;
-    if (programmaticConfig.promptsDir) config.promptsDir = programmaticConfig.promptsDir;
-    if (programmaticConfig.schemaFile) config.schemaFile = programmaticConfig.schemaFile;
-    if (programmaticConfig.secrets) {
-      Object.assign(config.secrets, programmaticConfig.secrets);
-    }
-    if (programmaticConfig.plugins) {
-      config.plugins.push(...programmaticConfig.plugins);
-    }
-  }
-
-  // Step 4: Initialize the Genkit service.
-  const userGenkit = await loadUserGenkitInstance(config.rootDir);
+  const userGenkit = programmaticConfig?.genkit ?? await loadUserGenkitInstance(config.rootDir);
   const ai = userGenkit || createDefaultGenkit(config);
-
-  // Step 5: The rest of the setup uses the final, guaranteed type-safe config.
-  const registry = createPluginRegistry(config.plugins);
+  const pluginManager = new PluginManager(config);
 
   const userSchemas = await registerUserSchemas({
     genkit: ai,
@@ -98,7 +87,7 @@ export async function dataprompt(
   const catalog = await createRouteCatalog({
     promptDir: config.promptsDir,
     ai,
-    registry,
+    pluginManager,
     userSchemas,
     rootDir: config.rootDir,
   });
@@ -118,7 +107,7 @@ export async function dataprompt(
     routes: routeManager,
     flows: flowManager,
     tasks: taskManager,
-    registry,
+    registry: pluginManager,
     ai,
     userSchemas,
   };
@@ -128,7 +117,7 @@ export async function createPromptServer(options: {
   config?: DatapromptUserConfig;
   startTasks?: boolean;
 } = { startTasks: true }) {
-  const { startTasks, config } = options;
+  const { config, startTasks } = options;
   const store = await dataprompt(config);
   const server = await createApiServer({ store, startTasks });
   return { store, server };
