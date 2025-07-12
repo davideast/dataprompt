@@ -1,5 +1,5 @@
 import { Genkit, z } from 'genkit';
-import { PromptConfig as PromptMetadata } from 'genkit'; 
+import { PromptConfig as PromptMetadata } from 'genkit';
 import { DatapromptFile, RequestContext, RequestContextSchema } from '../core/interfaces.js';
 import { PluginManager } from '../core/plugin.manager.js';
 import { RequestLogger, getLogManager } from '../utils/logging.js';
@@ -24,7 +24,7 @@ export interface FlowDefinition {
   };
 }
 
-// createPrompt now uses the Partial type correctly
+
 export function createPrompt(options: {
   ai: Genkit,
   flowDef: FlowDefinition,
@@ -41,7 +41,6 @@ export function createPrompt(options: {
     request: RequestContextSchema,
   });
 
-  // The definePrompt function accepts a Partial<PromptMetadata>
   return ai.definePrompt({
     name,
     ...promptMetadata,
@@ -50,7 +49,6 @@ export function createPrompt(options: {
   }, template);
 }
 
-// The rest of the file remains the same...
 export function createFlow(options: {
   ai: Genkit,
   flowDef: FlowDefinition,
@@ -60,7 +58,7 @@ export function createFlow(options: {
 }) {
   const { ai, flowDef, pluginManager, file, prompt } = options;
   const { data, name, outputSchema } = flowDef;
-  const logManager = getLogManager()
+  const logManager = getLogManager();
   const sources = data?.prompt?.sources || {};
   const resultActions = data?.prompt?.result || {};
 
@@ -74,10 +72,11 @@ export function createFlow(options: {
       const { request } = input;
       let logger: RequestLogger | undefined = undefined;
       if(request.requestId) {
-        logger = logManager.get(request.requestId)
+        logger = logManager.get(request.requestId);
       }
 
       const promptSources = await fetchPromptSources({ 
+        ai,
         sources, 
         request, 
         logger, 
@@ -87,14 +86,10 @@ export function createFlow(options: {
 
       const promptInput = { ...promptSources, request };
       
-      if (logger) {
-        const renderedPrompt = await prompt.render(promptInput);
-        await logger.promptCompilationEvent(promptInput, renderedPrompt);
-      }
-
+      // The generate call is automatically traced by Genkit.
       const result = await prompt(promptInput);
-
       await executeResultActions({
+        ai,
         resultActions,
         request,
         promptSources,
