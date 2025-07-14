@@ -41,6 +41,7 @@ export async function createRoute(params: {
     outputSchema = schemaFromMeta as z.ZodType;
   }
 
+  // TODO(davideast): Consider hiding FlowDefinition into an absraction
   const flowDef: FlowDefinition = {
     name: flowName,
     routePath: file.path,
