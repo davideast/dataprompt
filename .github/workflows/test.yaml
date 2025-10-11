@@ -2,20 +2,16 @@ name: Run tests
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
 
 jobs:
   test:
-    if: >-
-      (github.event.pull_request.author_association == 'COLLABORATOR' ||
-      github.event.pull_request.author_association == 'OWNER' ||
-      github.event.pull_request.author_association == 'MEMBER') ||
-      github.actor == 'jules[bot]'
+    # Only run if PR author has write access or is a collaborator
+    if: github.event.pull_request.author_association == 'COLLABORATOR' || github.event.pull_request.author_association == 'OWNER' || github.event.pull_request.author_association == 'MEMBER'
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
