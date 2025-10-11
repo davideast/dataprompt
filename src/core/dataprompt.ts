@@ -11,8 +11,9 @@ import { TaskManager, createTaskManager } from '../routing/task-manager.js';
 import { dateFormat } from '../utils/helpers/date-format.js';
 import { findUp } from 'find-up';
 import { pathToFileURL } from 'node:url';
-import { DatapromptConfig, DatapromptUserConfig } from './config.js'
+import { DatapromptConfig, DatapromptUserConfig } from './config.js';
 import { ConfigManager } from './config.manager.js';
+import { McpRegistry } from './mcp.js';
 
 export interface DatapromptStore {
   generate<Output = any>(url: string | Request | RequestContext): Promise<Output>;
@@ -22,6 +23,7 @@ export interface DatapromptStore {
   tasks: TaskManager;
   ai: Genkit;
   userSchemas: SchemaMap;
+  mcp: McpRegistry; // Expose the MCP registry
 }
 
 function createDefaultGenkit(config: DatapromptConfig): Genkit {
@@ -74,6 +76,7 @@ export async function dataprompt(
     ?? await loadUserGenkitInstance(config.rootDir);
   const ai = userGenkit || createDefaultGenkit(config);
   const pluginManager = new PluginManager(config);
+  const mcpRegistry = new McpRegistry(pluginManager); // Instantiate the registry
   const userSchemas = await registerUserSchemas({
     genkit: ai,
     schemaFile: config.schemaFile,
@@ -93,15 +96,10 @@ export async function dataprompt(
 
   return {
     async generate<Output>(url: string | Request | RequestContext) {
-      // The generate method uses the RouteManager to find the route
-      // and then directly calls the universal helper to create the context.
       const { route, request: reqFromManager } = await routeManager.getRequest(url);
       if (!route) {
         throw new Error(`No route found for ${typeof url === 'string' ? url : url.url}`);
       }
-
-      // The RouteManager's getRequest handles context creation.
-      // We just need to call the flow with the context it provides.
       return route.flow({ request: reqFromManager }) as Output;
     },
     routes: routeManager,
@@ -110,6 +108,7 @@ export async function dataprompt(
     registry: pluginManager,
     ai,
     userSchemas,
+    mcp: mcpRegistry, // Return the registry instance
   };
 }
 
