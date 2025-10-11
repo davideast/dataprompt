@@ -13,8 +13,6 @@ import { findUp } from 'find-up';
 import { pathToFileURL } from 'node:url';
 import { DatapromptConfig, DatapromptUserConfig } from './config.js';
 import { ConfigManager } from './config.manager.js';
-import { McpRegistry } from './mcp.js';
-
 export interface DatapromptStore {
   generate<Output = any>(url: string | Request | RequestContext): Promise<Output>;
   registry: PluginManager;
@@ -23,7 +21,6 @@ export interface DatapromptStore {
   tasks: TaskManager;
   ai: Genkit;
   userSchemas: SchemaMap;
-  mcp: McpRegistry; // Expose the MCP registry
 }
 
 function createDefaultGenkit(config: DatapromptConfig): Genkit {
@@ -76,7 +73,6 @@ export async function dataprompt(
     ?? await loadUserGenkitInstance(config.rootDir);
   const ai = userGenkit || createDefaultGenkit(config);
   const pluginManager = new PluginManager(config);
-  const mcpRegistry = new McpRegistry(pluginManager); // Instantiate the registry
   const userSchemas = await registerUserSchemas({
     genkit: ai,
     schemaFile: config.schemaFile,
@@ -108,7 +104,6 @@ export async function dataprompt(
     registry: pluginManager,
     ai,
     userSchemas,
-    mcp: mcpRegistry, // Return the registry instance
   };
 }
 

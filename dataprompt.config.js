@@ -1,6 +1,10 @@
 import { mcpPlugin } from './dist/plugins/mcp.js';
 
-/** @type {import('./src/types').DatapromptConfig} */
+/** @type {import('./src/core/interfaces').DatapromptConfig} */
 export default {
-  plugins: [mcpPlugin()],
+  plugins: [
+    mcpPlugin({
+      url: 'http://localhost:3000/mcp', // Default MCP server URL
+    }),
+  ],
 };

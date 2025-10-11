@@ -26,15 +26,11 @@ export const RequestContextSchema = z.object({
 
 export type RequestContext = z.infer<typeof RequestContextSchema>;
 
-import { McpPrompt, McpResource, McpTool } from './mcp.js';
-
-
 export interface DatapromptPlugin<Schema extends z.AnyZodObject = z.AnyZodObject> {
   name: string;
   createDataSource?(): DataSourceProvider;
   createDataAction?(): DataActionProvider;
   createTrigger?(): TriggerProvider;
-  createMcpProvider?(name: string, entity: McpTool | McpResource | McpPrompt): DataSourceProvider & DataActionProvider;
   provideSecrets?(): {
     secrets: Partial<z.infer<Schema>>;
     schema?: Schema;

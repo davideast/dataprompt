@@ -13,9 +13,3 @@ export type {
   TriggerConfig,
   TriggerProvider,
 } from './core/interfaces.js';
-export type {
-  McpTool,
-  McpResource,
-  McpPrompt,
-  McpFunction,
-} from './core/mcp.js';

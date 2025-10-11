@@ -3,41 +3,23 @@ model: googleai/gemini-1.5-flash-latest
 data.prompt:
   sources:
     mcp:
+      config:
+        url: 'http://localhost:3001/mcp'
       resources:
-        myResource:
-          name: 'some-resource'
-          params:
-            id: '123'
+        testResource:
+          uri: 'test://123'
       tools:
-        myTool:
-          name: 'some-tool'
-          params:
-            query: 'some query'
-      prompts:
-        myPrompt:
-          name: 'some-prompt'
-          params:
-            question: 'some question'
-  result:
-    mcp:
-      tools:
-        - name: 'cleanup-tool'
-          params:
-            data: '{{output}}'
-      prompts:
-        - name: 'notification-prompt'
-          params:
-            message: 'Analysis complete for resource {{myResource.id}}'
-output:
-  schema: "z.string()"
+        testTool:
+          name: 'test-tool'
+          arguments:
+            input: 'test-input'
 ---
 
-This is a test prompt that uses the MCP plugin.
+This is a test prompt that uses the MCP plugin with the official SDK.
 
 Here is the data from the MCP sources:
 
-Resource: {{json myResource}}
-Tool: {{json myTool}}
-Prompt: {{json myPrompt}}
+Test Resource: {{json testResource}}
+Test Tool: {{json testTool}}
 
-Please summarize the content of the resource.
+Please confirm that the test was successful.

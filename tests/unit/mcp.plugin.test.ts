@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mcpPlugin } from '../../src/plugins/mcp.js';
 import {
   DatapromptPlugin,
@@ -7,10 +7,40 @@ import {
   FetchDataParams,
   ExecuteParams,
 } from '../../src/core/interfaces.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+
+// Mock the MCP client
+vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
+  const mockClient = {
+    connect: vi.fn(),
+    readResource: vi.fn(),
+    callTool: vi.fn(),
+    getPrompt: vi.fn(),
+  };
+  return {
+    Client: vi.fn(() => mockClient),
+  };
+});
+
+vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => {
+  return {
+    StreamableHTTPClientTransport: vi.fn(),
+  };
+});
 
 describe('mcpPlugin', () => {
+  let mockMcpClient: Client;
+
+  beforeEach(() => {
+    mockMcpClient = new Client({
+      name: 'test-client',
+      version: '1.0.0',
+    });
+    vi.clearAllMocks();
+  });
+
   it('should create a valid plugin object', () => {
-    const plugin = mcpPlugin();
+    const plugin = mcpPlugin({ url: 'http://localhost:3000/mcp' });
     expect(plugin).toBeDefined();
     expect(plugin.name).toBe('mcp');
     expect(plugin.createDataSource).toBeInstanceOf(Function);
@@ -18,14 +48,14 @@ describe('mcpPlugin', () => {
   });
 
   describe('DataSourceProvider', () => {
-    const plugin = mcpPlugin();
-    const dataSource = plugin.createDataSource() as DataSourceProvider;
-
     it('should fetch data for resources, tools, and prompts', async () => {
+      const plugin = mcpPlugin({ url: 'http://localhost:3000/mcp' });
+      const dataSource = plugin.createDataSource() as DataSourceProvider;
+
       const params: FetchDataParams = {
         config: {
           resources: {
-            myResource: { name: 'resource-a' },
+            myResource: { uri: 'resource-a' },
           },
           tools: {
             myTool: { name: 'tool-a' },
@@ -44,30 +74,22 @@ describe('mcpPlugin', () => {
         },
       };
 
-      const data = await dataSource.fetchData(params);
+      await dataSource.fetchData(params);
 
-      expect(data.myResource).toBeDefined();
-      expect(data.myResource.content).toContain('resource-a');
-      expect(data.myTool).toBeDefined();
-      expect(data.myTool.result).toContain('tool-a');
-      expect(data.myPrompt).toBeDefined();
-      expect(data.myPrompt.response).toContain('prompt-a');
+      expect(mockMcpClient.readResource).toHaveBeenCalledWith({
+        uri: 'resource-a',
+      });
+      expect(mockMcpClient.callTool).toHaveBeenCalledWith({ name: 'tool-a' });
+      expect(mockMcpClient.getPrompt).toHaveBeenCalledWith({
+        name: 'prompt-a',
+      });
     });
   });
 
   describe('DataActionProvider', () => {
-    const plugin = mcpPlugin();
-    const dataAction = plugin.createDataAction() as DataActionProvider;
-
     it('should execute actions for tools and prompts', async () => {
-      const executeToolSpy = vi.spyOn(
-        (dataAction as any),
-        '_useTool'
-      );
-      const executePromptSpy = vi.spyOn(
-        (dataAction as any),
-        '_runPrompt'
-      );
+      const plugin = mcpPlugin({ url: 'http://localhost:3000/mcp' });
+      const dataAction = plugin.createDataAction() as DataActionProvider;
 
       const params: ExecuteParams = {
         config: {
@@ -87,14 +109,10 @@ describe('mcpPlugin', () => {
 
       await dataAction.execute(params);
 
-      expect(executeToolSpy).toHaveBeenCalledWith(
-        { name: 'tool-b' },
-        { output: 'test output' }
-      );
-      expect(executePromptSpy).toHaveBeenCalledWith(
-        { name: 'prompt-b' },
-        { output: 'test output' }
-      );
+      expect(mockMcpClient.callTool).toHaveBeenCalledWith({ name: 'tool-b' });
+      expect(mockMcpClient.getPrompt).toHaveBeenCalledWith({
+        name: 'prompt-b',
+      });
     });
   });
 });
