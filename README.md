@@ -79,7 +79,7 @@ dataprompt supports triggers to automatically execute prompts. The most common a
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   trigger:
     schedule:
@@ -163,7 +163,7 @@ The dotprompt format defines several properties:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 input:
   # not needed in data.prompt
   # input is generated from the sources and the request
@@ -232,7 +232,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fetch:
@@ -255,7 +255,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fetch:
@@ -307,7 +307,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 output:
   schema: ExampleSchema
 ---
@@ -347,7 +347,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   trigger:
     schedule:
@@ -611,7 +611,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     firestore:
@@ -638,7 +638,7 @@ Example:
 ```hbs
 ---
 # File: /prompts/hn/[page].prompt
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fetch:
@@ -685,7 +685,7 @@ Example (string):
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fetch:
@@ -703,7 +703,7 @@ Example (object):
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fetch:
@@ -745,7 +745,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   trigger:
     schedule:
@@ -793,7 +793,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fs:
@@ -813,7 +813,7 @@ Example:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   result:
     fs:
