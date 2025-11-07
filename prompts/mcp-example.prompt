@@ -1,0 +1,25 @@
+---
+model: googleai/gemini-1.5-flash-latest
+data.prompt:
+  sources:
+    mcp:
+      config:
+        url: 'http://localhost:3001/mcp'
+      resources:
+        testResource:
+          uri: 'test://123'
+      tools:
+        testTool:
+          name: 'test-tool'
+          arguments:
+            input: 'test-input'
+---
+
+This is a test prompt that uses the MCP plugin with the official SDK.
+
+Here is the data from the MCP sources:
+
+Test Resource: {{json testResource}}
+Test Tool: {{json testTool}}
+
+Please confirm that the test was successful.

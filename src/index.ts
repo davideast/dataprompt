@@ -1,12 +1,15 @@
-export { DatapromptRoute } from './routing/server.js';
-export { DatapromptConfig } from './core/config.js'
-export { dataprompt, createPromptServer } from './core/dataprompt.js'
-export { 
-  RequestContextSchema, 
-  RequestContext, 
-  DatapromptPlugin, 
+// Export runtime values
+export { dataprompt, createPromptServer } from './core/dataprompt.js';
+export { RequestContextSchema } from './core/interfaces.js';
+
+// Export type-only interfaces and types
+export type { DatapromptRoute } from './routing/server.js';
+export type { DatapromptConfig, DatapromptUserConfig } from './core/config.js';
+export type {
+  RequestContext,
+  DatapromptPlugin,
   DataSourceProvider,
   DataActionProvider,
   TriggerConfig,
   TriggerProvider,
-} from './core/interfaces.js'
+} from './core/interfaces.js';

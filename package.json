@@ -60,6 +60,7 @@
     "@clack/prompts": "^0.10.0",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/googleai": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.20.0",
     "date-fns": "^4.1.0",
     "dotprompt": "^1.0.1",
     "express": "^4.21.2",

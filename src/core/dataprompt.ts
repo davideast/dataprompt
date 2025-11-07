@@ -11,9 +11,8 @@ import { TaskManager, createTaskManager } from '../routing/task-manager.js';
 import { dateFormat } from '../utils/helpers/date-format.js';
 import { findUp } from 'find-up';
 import { pathToFileURL } from 'node:url';
-import { DatapromptConfig, DatapromptUserConfig } from './config.js'
+import { DatapromptConfig, DatapromptUserConfig } from './config.js';
 import { ConfigManager } from './config.manager.js';
-
 export interface DatapromptStore {
   generate<Output = any>(url: string | Request | RequestContext): Promise<Output>;
   registry: PluginManager;
@@ -93,15 +92,10 @@ export async function dataprompt(
 
   return {
     async generate<Output>(url: string | Request | RequestContext) {
-      // The generate method uses the RouteManager to find the route
-      // and then directly calls the universal helper to create the context.
       const { route, request: reqFromManager } = await routeManager.getRequest(url);
       if (!route) {
         throw new Error(`No route found for ${typeof url === 'string' ? url : url.url}`);
       }
-
-      // The RouteManager's getRequest handles context creation.
-      // We just need to call the flow with the context it provides.
       return route.flow({ request: reqFromManager }) as Output;
     },
     routes: routeManager,

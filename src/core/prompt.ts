@@ -17,11 +17,10 @@ export function createGenkitPrompt(options: {
   const { ai, flowDef } = options;
   const { data, name, promptMetadata, outputSchema, template } = flowDef;
   const sources = data?.prompt?.sources || {};
+  // The input schema should have a key for each data source provider.
   const promptInputSchema = z.object({
     ...Object.fromEntries(
-      Object.entries(sources).flatMap(([sourceName, sourceConfig]) => {
-        return Object.keys(sourceConfig).map(propertyName => [propertyName, z.any()])
-      })
+      Object.keys(sources).map(sourceName => [sourceName, z.any()])
     ),
     request: RequestContextSchema,
   });
@@ -82,45 +81,48 @@ export class Prompt {
 
   /**
    * Fetches data from all sources defined in the prompt's frontmatter.
+   * This version is refactored to support the flat API structure.
    */
   async #fetchData(request: RequestContext): Promise<Record<string, any>> {
     const sources = this.#flowDef.data?.prompt?.sources || {};
     const promptSources: Record<string, any> = {};
 
-    for (const [sourceName, sourceConfig] of Object.entries(sources)) {
-      const sourceProvider = this.#pluginManager.getDataSource(sourceName);
-      for (const [propertyName, config] of Object.entries(sourceConfig)) {
-        const data = await this.#ai.run(`DataSource: ${sourceName}.${propertyName}`, async () => {
-          const processedConfig = processTemplates(handlebars, config, { request });
-          return await sourceProvider.fetchData({
-            request,
-            config: processedConfig,
-            file: this.#file,
-          });
+    for (const [providerName, providerConfig] of Object.entries(sources)) {
+      const sourceProvider = this.#pluginManager.getDataSource(providerName);
+      const data = await this.#ai.run(`DataSource: ${providerName}`, async () => {
+        // The entire config for the provider is processed for templates.
+        const processedConfig = processTemplates(handlebars, providerConfig, { request });
+        return await sourceProvider.fetchData({
+          request,
+          config: processedConfig,
+          file: this.#file,
         });
-        promptSources[propertyName] = data;
-      }
+      });
+      // The result is stored under the provider's name (e.g., 'weather').
+      promptSources[providerName] = data;
     }
     return promptSources;
   }
 
   /**
    * Executes all result actions defined in the prompt's frontmatter.
+   * This version is refactored to support the flat API structure.
    */
   async #executeActions(request: RequestContext, promptSources: Record<string, any>, result: { output: any }): Promise<void> {
     const resultActions = this.#flowDef.data?.prompt?.result || {};
-    for (const [actionName, actionConfig] of Object.entries(resultActions)) {
-      await this.#ai.run(`ResultAction: ${actionName}`, async () => {
-        const actionProvider = this.#pluginManager.getAction(actionName);
+    for (const [providerName, providerConfig] of Object.entries(resultActions)) {
+      await this.#ai.run(`ResultAction: ${providerName}`, async () => {
+        const actionProvider = this.#pluginManager.getAction(providerName);
+        const templateData = { ...promptSources, request, output: result.output };
         const processedConfig = processTemplates(
           handlebars,
-          actionConfig,
-          { ...promptSources, request, output: result.output }
+          providerConfig,
+          templateData
         );
         await actionProvider.execute({
           request,
           config: processedConfig,
-          promptSources: { ...promptSources, output: result.output },
+          promptSources: templateData,
           file: this.#file,
         });
       });

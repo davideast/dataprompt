@@ -3,11 +3,12 @@ import { DatapromptPlugin, DataActionProvider, DataSourceProvider, TriggerProvid
 import { firestorePlugin } from '../plugins/firebase/public.js';
 import { schedulerPlugin } from '../plugins/scheduler/index.js';
 import { fetchPlugin } from '../plugins/fetch/index.js';
+import { mcpPlugin } from '../plugins/mcp.js';
 
 export class PluginManager {
   #dataSources = new Map<string, DataSourceProvider>();
   #actions = new Map<string, DataActionProvider>();
-  #triggers = new Map<string, TriggerProvider>(); // Added map for triggers
+  #triggers = new Map<string, TriggerProvider>();
 
   constructor(config: DatapromptConfig) {
     const allPlugins = this.#resolvePlugins(config.plugins);
@@ -26,13 +27,12 @@ export class PluginManager {
       const dataActionProvider = plugin.createDataAction();
       this.#actions.set(dataActionProvider.name, dataActionProvider);
     }
-
     if (plugin.createTrigger) {
       const triggerProvider = plugin.createTrigger();
       this.#triggers.set(triggerProvider.name, triggerProvider);
     }
   }
-  
+
   #resolvePlugins = (userPlugins: DatapromptPlugin[] = []): DatapromptPlugin[] => {
     const plugins = [...userPlugins];
     if (!plugins.some(p => p.name === 'firestore')) plugins.push(firestorePlugin());
@@ -57,10 +57,6 @@ export class PluginManager {
     return provider;
   }
 
-  /**
-   * NEW: Retrieves a trigger provider by its registered name.
-   * @param name The name of the trigger provider (e.g., 'schedule').
-   */
   public getTrigger(name: string): TriggerProvider {
     const provider = this.#triggers.get(name);
     if (!provider) {

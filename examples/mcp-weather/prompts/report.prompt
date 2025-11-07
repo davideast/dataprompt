@@ -1,0 +1,28 @@
+---
+model: googleai/gemini-2.5-flash-lite
+data.prompt:
+  sources:
+    # 'weather' is a first-class data source provider.
+    # The key 'location' is passed as a parameter to the 'get' function of the weatherTool.
+    weather:
+      location: "{{request.query.location}}"
+
+    # 'user' is also a first-class provider.
+    # The key 'id' is passed to the 'get' function of the userResource.
+    user:
+      id: "user-123" # In a real app, this would be dynamic
+
+output:
+  schema:
+    type: string
+---
+
+# Weather Report
+
+Hi {{user.name}},
+
+Here is the weather report for **{{weather.city}}**:
+- **Temperature**: {{weather.temperature}} degrees
+- **Forecast**: {{weather.forecast}}
+
+Let me know if you need anything else!

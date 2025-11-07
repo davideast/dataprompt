@@ -9,6 +9,7 @@ import { createFileMap } from './file-system.js';
 import { SchemaMap } from '../utils/schema-loader.js';
 import { events } from '../core/events.js';
 import { randomUUID } from 'node:crypto';
+import { join as pathJoin } from 'node:path';
 
 export type RouteCatalog = {
   express: Map<string, DatapromptRoute>;
@@ -61,7 +62,8 @@ export async function createRouteCatalog(params: {
   const express: Map<string, DatapromptRoute> = new Map();
   const next: Map<string, DatapromptRoute> = new Map();
   const tasks: Map<string, ScheduledTask> = new Map();
-  const fileMap = await createFileMap(promptDir);
+  const absolutePromptDir = pathJoin(rootDir, promptDir);
+  const fileMap = await createFileMap(absolutePromptDir);
 
   for (const [expressRoute, file] of fileMap.entries()) {
     try {
