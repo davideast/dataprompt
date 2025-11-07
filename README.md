@@ -34,15 +34,15 @@ npx dataprompt create <project-dir>
 
 ### Create a `.prompt` file
 
-In your `prompts` directory, create a file like `prompts/hello.prompt`:
+In your `prompts` directory, create a file like `prompts/[page].prompt`:
 
 ```hbs
 ---
-model: googleai/gemini-2.0-flash
+model: googleai/gemini-2.5-flash
 data.prompt:
   sources:
     fetch:
-      news: https://api.hnpwa.com/v0/news/1.json
+      news: https://api.hnpwa.com/v0/news/{{request.params.page}}.json
 output:
   schema: HNAnalysisSchema
 ---
