@@ -9,6 +9,8 @@ import { fetchPlugin } from '../plugins/fetch/index.js';
 import { pathToFileURL } from 'node:url';
 
 const CoreSecretsSchema = z.object({
+  // TODO: Make these optional or configurable based on which plugins/providers are actually used.
+  // Currently, this forces every user to have Google credentials even if they use a different provider.
   GOOGLEAI_API_KEY: z.string().min(1, { message: 'GOOGLEAI_API_KEY is required.' }),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1, { message: 'GOOGLE_APPLICATION_CREDENTIALS is required.' }),
 }).passthrough();
