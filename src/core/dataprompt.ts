@@ -29,6 +29,8 @@ function createDefaultGenkit(config: DatapromptConfig): Genkit {
   if (!apiKey) {
     throw new Error('FATAL: GOOGLEAI_API_KEY not found for default Genkit initialization.');
   }
+  // TODO: Allow configuration of other AI providers beyond Google AI.
+  // TODO: Make the default Genkit initialization more flexible or plugin-based.
   const ai = new Genkit({
     plugins: [googleAI({ apiKey })],
   });
@@ -45,6 +47,7 @@ async function loadUserGenkitInstance(rootDir: string): Promise<Genkit | undefin
         return userModule.default.genkit;
       }
     } catch (e) {
+      // TODO: Replace console.warn with a proper logging mechanism that can be configured/silenced.
       console.warn(`Warning: Could not dynamically import user's genkit instance from ${configPath}.`, e);
     }
   }

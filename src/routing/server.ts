@@ -24,6 +24,7 @@ function createRouteHandler({
     const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
     const standardRequest = new Request(url, {
       method: req.method,
+      // TODO: Improve type safety for headers. req.headers can contain string[] which might not be compatible with Record<string, string>.
       headers: req.headers as Record<string, string>,
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     });
@@ -87,6 +88,9 @@ export async function createApiServer({ store, startTasks }: {
       await createRouteHandler({ expressRoute, store })
     );
   }
+
+  // TODO: Add support for graceful shutdown (handling SIGTERM, SIGINT) to close server and database connections properly.
+  // TODO: Consider allowing the caller to specify the port or return a `listen` helper.
 
   return server;
 }
