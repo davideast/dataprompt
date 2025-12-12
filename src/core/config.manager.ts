@@ -11,8 +11,9 @@ import { pathToFileURL } from 'node:url';
 const CoreSecretsSchema = z.object({
   // TODO: Make these optional or configurable based on which plugins/providers are actually used.
   // Currently, this forces every user to have Google credentials even if they use a different provider.
-  GOOGLEAI_API_KEY: z.string().min(1, { message: 'GOOGLEAI_API_KEY is required.' }),
-  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1, { message: 'GOOGLE_APPLICATION_CREDENTIALS is required.' }),
+  GOOGLEAI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  // GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1, { message: 'GOOGLE_APPLICATION_CREDENTIALS is required.' }),
 }).passthrough();
 
 type PluginSecrets = {
@@ -38,11 +39,13 @@ export class ConfigManager {
     const rootDir = await this.#resolveRootDir(userConfig);
     const defaultConfig: DatapromptConfig = {
       plugins: [],
+      genkitPlugins: [],
       promptsDir: 'prompts',
       schemaFile: 'schema.ts',
       secrets: {
         GOOGLEAI_API_KEY: process.env.GOOGLEAI_API_KEY,
         GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       },
       rootDir,
     };
@@ -51,6 +54,7 @@ export class ConfigManager {
     const mergedConfig: DatapromptConfig = {
         ...defaultConfig,
         ...userConfig, // This will shallow-overwrite promptsDir, etc. which is what we want.
+        genkitPlugins: userConfig?.genkitPlugins || defaultConfig.genkitPlugins,
         secrets: {
             ...defaultConfig.secrets,    // Start with default secrets...
             ...userConfig?.secrets,      // ...then merge user's secrets over them.

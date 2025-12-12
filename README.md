@@ -121,15 +121,17 @@ export default {
 *   `promptsDir`: (string, default: `'prompts'`) The directory where your `.prompt` files are located. This path is resolved relative to the project root.
 *   `schemaFile`: (string, default: `'schema.ts'`) The path to your schema file, which exports Zod schemas for structured output. This path is resolved relative to the project root.
 *   `plugins`: (DatapromptPlugin[], default: `[]`) An array of dataprompt plugins to register.
+*   `genkitPlugins`: (Plugin[], default: `[]`) An array of Genkit plugins to use. If provided, they will be used to initialize the default Genkit instance.
 *   `secrets`: (DatapromptSecrets, default: `process.env`) An object containing secret keys, such as API keys. See Secrets.
-*   `genkit`: (Genkit, default: `getGenkit()`) A pre-configured Genkit instance to use. If not provided, dataprompt will create a default instance with the Google AI provider.
+*   `genkit`: (Genkit, default: `getGenkit()`) A pre-configured Genkit instance to use. If not provided, dataprompt will create a default instance with the Google AI provider (if a key is present) or use the provided `genkitPlugins`.
 *   `rootDir`: (string, default: project root) This option sets a custom root directory. This is useful when used in a monorepo setup.
 
 ### Secrets
 
 dataprompt automatically looks for the following environment variables:
 
-*   `GOOGLEAI_API_KEY`: API key for the Google AI Gemini model.
+*   `GEMINI_API_KEY`: (Preferred) API key for the Google AI Gemini model.
+*   `GOOGLEAI_API_KEY`: (Legacy) API key for the Google AI Gemini model.
 *   `GOOGLE_APPLICATION_CREDENTIALS`: Path to a Firebase service account key file.
 
 You can also set these secrets in your `dataprompt.config.{js,ts}` file:
@@ -138,7 +140,7 @@ You can also set these secrets in your `dataprompt.config.{js,ts}` file:
 // dataprompt.config.ts
 export default {
   secrets: {
-    GOOGLEAI_API_KEY: 'YOUR_API_KEY',
+    GEMINI_API_KEY: 'YOUR_API_KEY',
     GOOGLE_APPLICATION_CREDENTIALS: '/path/to/serviceAccountKey.json',
   },
 };
@@ -376,11 +378,25 @@ The `TaskManager` API provides methods to manage scheduled tasks:
 
 ### Using non Gemini Models
 
-dataprompt is built to work with Google AI (Gemini) models out-of-the-box. However, you can configure a custom Genkit instance with other models and providers as plugins and provide it to a DatapromptConfig.
+dataprompt is built to work with Google AI (Gemini) models out-of-the-box, but is flexible enough to support any Genkit plugin. You can configure other models and providers by passing plugins to the `genkitPlugins` array in your configuration.
 
 [See Genkit Plugins](https://github.com/TheFireCo/genkit-plugins)
 
 Example:
+
+```js
+// dataprompt.config.js
+import { otherModelPlugin } from '<other-model>';
+
+/** @type {import('dataprompt').DatapromptConfig} */
+export default {
+  genkitPlugins: [
+    otherModelPlugin({ /* ... */ })
+  ]
+};
+```
+
+Alternatively, you can provide a fully configured Genkit instance:
 
 ```js
 // dataprompt.config.js
@@ -396,8 +412,6 @@ export default {
   })
 };
 ```
-
-Out-of-the-box model support for other providers is on the roadmap.
 
 ### JavaScript API - Using dataprompt in your own app
 
@@ -418,8 +432,9 @@ You can use dataprompt's JavaScript API to integrate it into your existing appli
 
     *   `promptsDir`:  (string, optional) The directory where your `.prompt` files are located. Defaults to `'prompts'`.
     *   `schemaFile`:  (string, optional) The path to your Zod schema file. Defaults to `'schema.ts'`.
-    *   `genkit`: (Genkit, optional) A pre-configured Genkit instance. If not provided, dataprompt will create one with the Google AI plugin.
+    *   `genkit`: (Genkit, optional) A pre-configured Genkit instance. If not provided, dataprompt will create one with the Google AI plugin or configured `genkitPlugins`.
     *   `plugins`: (DatapromptPlugin[], optional) An array of custom plugins to register.
+    *   `genkitPlugins`: (Plugin[], optional) An array of Genkit plugins to use.
     *   `secrets`: (DatapromptSecrets, optional) An object containing API keys and other secrets.
     *   `rootDir`: (string, optional) The root directory of your project.
 
@@ -455,6 +470,7 @@ export interface DatapromptPlugin {
   createDataSource?(): DataSourceProvider;
   createDataAction?(): DataActionProvider;
   createTrigger?(): TriggerProvider;
+  provideGenkitPlugins?(): any[];
 }
 ```
 
@@ -462,6 +478,7 @@ export interface DatapromptPlugin {
 *   `createDataSource?(): DataSourceProvider`: An optional method that returns a `DataSourceProvider`.
 *   `createDataAction?(): DataActionProvider`: An optional method that returns a `DataActionProvider`.
 *   `createTrigger?(): TriggerProvider`: An optional method that returns a `TriggerProvider`.
+*   `provideGenkitPlugins?(): any[]`: An optional method that returns an array of Genkit plugins to be used in the default Genkit instance.
 
 #### DataSourceProvider
 

@@ -13,6 +13,7 @@ export type DatapromptUserConfig = {
   secrets?: Record<string, any>;
   rootDir?: string;
   genkit?: Genkit;
+  genkitPlugins?: any[];
 };
 
 /**
@@ -20,6 +21,7 @@ export type DatapromptUserConfig = {
  * that the application will use. All properties are required.
  * It does NOT contain live service instances like Genkit.
  */
-export type DatapromptConfig = Required<Omit<DatapromptUserConfig, 'plugins' | 'genkit'>> & {
+export type DatapromptConfig = Required<Omit<DatapromptUserConfig, 'plugins' | 'genkit' | 'genkitPlugins'>> & {
   plugins: DatapromptPlugin[];
+  genkitPlugins: any[];
 };
