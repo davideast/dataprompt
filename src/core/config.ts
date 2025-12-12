@@ -1,5 +1,6 @@
 import { Genkit } from 'genkit';
 import { DatapromptPlugin } from './interfaces.js';
+import { LogLevel } from '../utils/logging.js';
 
 /**
  * Defines the shape of the configuration object that a user can provide
@@ -13,6 +14,7 @@ export type DatapromptUserConfig = {
   secrets?: Record<string, any>;
   rootDir?: string;
   genkit?: Genkit;
+  logLevel?: LogLevel;
   genkitPlugins?: any[];
 };
 
@@ -21,7 +23,8 @@ export type DatapromptUserConfig = {
  * that the application will use. All properties are required.
  * It does NOT contain live service instances like Genkit.
  */
-export type DatapromptConfig = Required<Omit<DatapromptUserConfig, 'plugins' | 'genkit' | 'genkitPlugins'>> & {
+export type DatapromptConfig = Required<Omit<DatapromptUserConfig, 'plugins' | 'genkit' | 'logLevel'>> & {
   plugins: DatapromptPlugin[];
+  logLevel: LogLevel;
   genkitPlugins: any[];
 };
