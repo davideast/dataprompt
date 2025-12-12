@@ -1,5 +1,27 @@
 import { RequestContext, RequestContextSchema } from "../../core/interfaces.js";
 import { MatchResult } from "../../routing/route-matcher.js";
+import { IncomingHttpHeaders } from 'http';
+
+/**
+ * Converts Node.js/Express headers to Fetch API Headers.
+ * Handles strings, string arrays, and undefined values safely.
+ * @param headers Node.js IncomingHttpHeaders
+ * @returns Standard Fetch API Headers object
+ */
+export function convertHeaders(headers: IncomingHttpHeaders): Headers {
+  const fetchHeaders = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (value === undefined) {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((v) => fetchHeaders.append(key, v));
+    } else {
+      fetchHeaders.append(key, value);
+    }
+  }
+  return fetchHeaders;
+}
 
 /**
  * A universal helper to create a valid RequestContext from various inputs.
