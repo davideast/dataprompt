@@ -94,6 +94,50 @@ export class RequestLogger extends BaseLogger<RequestLogContext> {
 	}
 }
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
+
+export class SystemLogger {
+	private level: LogLevel = 'info';
+
+	constructor(level: LogLevel = 'info') {
+		this.level = level;
+	}
+
+	setLevel(level: LogLevel) {
+		this.level = level;
+	}
+
+	private shouldLog(messageLevel: LogLevel): boolean {
+		const levels: LogLevel[] = ['debug', 'info', 'warn', 'error', 'silent'];
+		return levels.indexOf(messageLevel) >= levels.indexOf(this.level);
+	}
+
+	debug(message: string, ...args: any[]) {
+		if (this.shouldLog('debug')) {
+			console.debug(`[DEBUG] ${message}`, ...args);
+		}
+	}
+
+	info(message: string, ...args: any[]) {
+		if (this.shouldLog('info')) {
+			console.info(`[INFO] ${message}`, ...args);
+		}
+	}
+
+	warn(message: string, ...args: any[]) {
+		if (this.shouldLog('warn')) {
+			console.warn(`[WARN] ${message}`, ...args);
+		}
+	}
+
+	error(message: string, ...args: any[]) {
+		if (this.shouldLog('error')) {
+			console.error(`[ERROR] ${message}`, ...args);
+		}
+	}
+}
+
+
 export interface LoggerStore {
 	createRequestLogger(params: {
 		route: DatapromptRoute;
@@ -101,6 +145,7 @@ export interface LoggerStore {
 		requestId?: string;
 	}): RequestLogger;
 	get(id: string): BaseLogger<any> | undefined;
+	system: SystemLogger;
 }
 
 let logManager: LoggerStore | undefined;
@@ -114,6 +159,8 @@ export function getLogManager(): LoggerStore {
 
 export function createLogStore(): LoggerStore {
 	const logs: Map<string, BaseLogger<RequestLogContext>> = new Map();
+	const systemLogger = new SystemLogger();
+
 	return {
 		get(id: string) {
 			return logs.get(id);
@@ -134,6 +181,7 @@ export function createLogStore(): LoggerStore {
 			const logger = new RequestLogger(params);
 			logs.set(logger.id, logger);
 			return logger;
-		}
+		},
+		system: systemLogger
 	}
 }

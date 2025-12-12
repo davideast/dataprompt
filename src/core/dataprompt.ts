@@ -13,6 +13,7 @@ import { findUp } from 'find-up';
 import { pathToFileURL } from 'node:url';
 import { DatapromptConfig, DatapromptUserConfig } from './config.js'
 import { ConfigManager } from './config.manager.js';
+import { getLogManager } from '../utils/logging.js';
 
 export interface DatapromptStore {
   generate<Output = any>(url: string | Request | RequestContext): Promise<Output>;
@@ -47,8 +48,7 @@ async function loadUserGenkitInstance(rootDir: string): Promise<Genkit | undefin
         return userModule.default.genkit;
       }
     } catch (e) {
-      // TODO: Replace console.warn with a proper logging mechanism that can be configured/silenced.
-      console.warn(`Warning: Could not dynamically import user's genkit instance from ${configPath}.`, e);
+      getLogManager().system.warn(`Warning: Could not dynamically import user's genkit instance from ${configPath}.`, e);
     }
   }
   return undefined;
@@ -64,6 +64,7 @@ function mergeConfigs(base: DatapromptConfig, override?: DatapromptUserConfig): 
   if (override.schemaFile) merged.schemaFile = override.schemaFile;
   if (override.secrets) Object.assign(merged.secrets, override.secrets);
   if (override.plugins) merged.plugins.push(...override.plugins);
+  if (override.logLevel) merged.logLevel = override.logLevel;
   return merged;
 }
 
@@ -73,6 +74,9 @@ export async function dataprompt(
   const configManager = new ConfigManager();
   const fileConfig = await configManager.load();
   const config = mergeConfigs(fileConfig, programmaticConfig);
+  if (config.logLevel) {
+    getLogManager().system.setLevel(config.logLevel);
+  }
   const userGenkit = programmaticConfig?.genkit
     ?? await loadUserGenkitInstance(config.rootDir);
   const ai = userGenkit || createDefaultGenkit(config);
