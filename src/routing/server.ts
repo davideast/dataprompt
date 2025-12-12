@@ -3,7 +3,7 @@ import { DatapromptStore } from '../core/dataprompt.js';
 import { events } from '../core/events.js';
 import { getLogManager } from '../utils/logging.js';
 import { createPromptFlow, FlowDefinition } from './flow-builder.js';
-import { createRequestContext } from '../utils/helpers/request.js';
+import { createRequestContext, convertHeaders } from '../utils/helpers/request.js';
 
 export interface DatapromptRoute {
   flowDef: FlowDefinition;
@@ -24,8 +24,7 @@ function createRouteHandler({
     const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
     const standardRequest = new Request(url, {
       method: req.method,
-      // TODO: Improve type safety for headers. req.headers can contain string[] which might not be compatible with Record<string, string>.
-      headers: req.headers as Record<string, string>,
+      headers: convertHeaders(req.headers),
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     });
 
