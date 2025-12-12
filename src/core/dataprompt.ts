@@ -26,15 +26,33 @@ export interface DatapromptStore {
 }
 
 function createDefaultGenkit(config: DatapromptConfig): Genkit {
-  const apiKey = config.secrets?.GOOGLEAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('FATAL: GOOGLEAI_API_KEY not found for default Genkit initialization.');
+  const plugins: any[] = [];
+  const googleApiKey = config.secrets?.GOOGLEAI_API_KEY || config.secrets?.GEMINI_API_KEY;
+
+  if (config.genkitPlugins) {
+    plugins.push(...config.genkitPlugins);
   }
-  // TODO: Allow configuration of other AI providers beyond Google AI.
-  // TODO: Make the default Genkit initialization more flexible or plugin-based.
-  const ai = new Genkit({
-    plugins: [googleAI({ apiKey })],
-  });
+
+  for (const plugin of config.plugins) {
+    if (plugin.provideGenkitPlugins) {
+      plugins.push(...plugin.provideGenkitPlugins());
+    }
+  }
+
+  // If no plugins are provided, or if we have a Google API key,
+  // we try to add Google AI support.
+  // We prioritize user provided plugins, but also support Google AI if key is present.
+  if (googleApiKey) {
+    // We can't easily check if googleAI is already in plugins because they are instances.
+    // However, Genkit supports multiple plugins.
+    plugins.push(googleAI({ apiKey: googleApiKey }));
+  }
+
+  if (plugins.length === 0) {
+    throw new Error('FATAL: No Genkit plugins configured and GOOGLEAI_API_KEY/GEMINI_API_KEY not found.');
+  }
+
+  const ai = new Genkit({ plugins });
   ai.defineHelper('dateFormat', dateFormat);
   return ai;
 }
@@ -56,15 +74,16 @@ async function loadUserGenkitInstance(rootDir: string): Promise<Genkit | undefin
 
 function mergeConfigs(base: DatapromptConfig, override?: DatapromptUserConfig): DatapromptConfig {
   if (!override) {
-    return { ...base, secrets: { ...base.secrets }, plugins: [...base.plugins] };
+    return { ...base, secrets: { ...base.secrets }, plugins: [...base.plugins], genkitPlugins: [...base.genkitPlugins] };
   }
-  const merged = { ...base, secrets: { ...base.secrets }, plugins: [...base.plugins] };
+  const merged = { ...base, secrets: { ...base.secrets }, plugins: [...base.plugins], genkitPlugins: [...base.genkitPlugins] };
   if (override.rootDir) merged.rootDir = override.rootDir;
   if (override.promptsDir) merged.promptsDir = override.promptsDir;
   if (override.schemaFile) merged.schemaFile = override.schemaFile;
   if (override.secrets) Object.assign(merged.secrets, override.secrets);
   if (override.plugins) merged.plugins.push(...override.plugins);
   if (override.logLevel) merged.logLevel = override.logLevel;
+  if (override.genkitPlugins) merged.genkitPlugins.push(...override.genkitPlugins);
   return merged;
 }
 

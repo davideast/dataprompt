@@ -15,6 +15,7 @@ export type DatapromptUserConfig = {
   rootDir?: string;
   genkit?: Genkit;
   logLevel?: LogLevel;
+  genkitPlugins?: any[];
 };
 
 /**
@@ -25,4 +26,5 @@ export type DatapromptUserConfig = {
 export type DatapromptConfig = Required<Omit<DatapromptUserConfig, 'plugins' | 'genkit' | 'logLevel'>> & {
   plugins: DatapromptPlugin[];
   logLevel: LogLevel;
+  genkitPlugins: any[];
 };

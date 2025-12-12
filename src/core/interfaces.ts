@@ -35,6 +35,7 @@ export interface DatapromptPlugin<Schema extends z.AnyZodObject = z.AnyZodObject
     secrets: Partial<z.infer<Schema>>;
     schema?: Schema;
   } | undefined;
+  provideGenkitPlugins?(): any[];
 }
 
 export type FetchDataParams = {
