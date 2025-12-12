@@ -7,7 +7,7 @@ import { execute } from './actions.js'
 import { FirebasePluginConfig } from '../types.js';
 
 const FirestorePluginSecrets = z.object({
-  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1)
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional()
 });
 
 export function firestorePlugin(
