@@ -223,13 +223,13 @@ export async function devCommand() {
     s.start(promptMessages[0] + '\n');
 
     // Initialize the API server
-    const { server, store } = await createPromptServer();
+    const { listen, store } = await createPromptServer();
 
     console.log('\n');
     s.stop(color.green('Server started successfully!'));
 
     // Start initial server
-    httpServer = server.listen(port, () => {
+    httpServer = listen(port, () => {
       console.log(`\nDevelopment server started on ${color.cyan(`http://localhost:${port}`)}`);
 
       const routeList = formatRoutes(store.routes.all('next'), port);
@@ -238,22 +238,6 @@ export async function devCommand() {
       const taskList = formatTasks(store.tasks.all())
       console.log('Available tasks:\n' + taskList + '\n')
     });
-
-    const shutdown = () => {
-      if (httpServer) {
-        httpServer.close(async () => {
-          p.outro('Development server stopped');
-          store.tasks.cleanup();
-          process.exit(0);
-        });
-      } else {
-        p.outro('Development server stopped');
-        process.exit(0);
-      }
-    };
-
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
 
   } catch (error) {
     console.log({ error })

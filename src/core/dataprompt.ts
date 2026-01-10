@@ -145,6 +145,6 @@ export async function createPromptServer(options: {
 } = { startTasks: true }) {
   const { config, startTasks } = options;
   const store = await dataprompt(config);
-  const server = await createApiServer({ store, startTasks });
-  return { store, server };
+  const { app, listen } = await createApiServer({ store, startTasks });
+  return { store, app, listen, server: app };
 }

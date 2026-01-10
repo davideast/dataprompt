@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'node:http';
 import { DatapromptStore } from '../core/dataprompt.js';
 import { events } from '../core/events.js';
 import { getLogManager } from '../utils/logging.js';
@@ -88,8 +89,31 @@ export async function createApiServer({ store, startTasks }: {
     );
   }
 
-  // TODO: Add support for graceful shutdown (handling SIGTERM, SIGINT) to close server and database connections properly.
-  // TODO: Consider allowing the caller to specify the port or return a `listen` helper.
+  const app = server;
 
-  return server;
+  const listen = (port: number, callback?: () => void) => {
+    const httpServer = app.listen(port, callback);
+
+    const shutdown = () => {
+      console.log('\nGracefully shutting down...');
+      httpServer.close(() => {
+        console.log('HTTP server closed.');
+        store.tasks.cleanup();
+        process.exit(0);
+      });
+
+      // Force close after 10s
+      setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+
+    return httpServer;
+  };
+
+  return { app, listen };
 }
