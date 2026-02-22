@@ -12,6 +12,7 @@ import { DatapromptConfig } from '../../src/core/config.js';
 import { DatapromptFile, RequestContext } from '../../src/core/interfaces.js';
 import { createRoute } from '../../src/routing/route-builder.js';
 import { SchemaMap, registerUserSchemas } from '../../src/utils/schema-loader.js';
+import { getDefaultPlugins } from '../../src/core/default-plugins.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -106,7 +107,7 @@ describe('Prompt Class Integration Tests', () => {
             GOOGLEAI_API_KEY: process.env.GOOGLEAI_API_KEY || 'test-key',
             GOOGLE_APPLICATION_CREDENTIALS: './fake-creds.json'
         },
-        plugins: []
+        plugins: getDefaultPlugins()
     };
     
     ai = new Genkit({ plugins: [googleAI({ apiKey: config.secrets.GOOGLEAI_API_KEY })] });

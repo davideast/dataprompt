@@ -46,6 +46,11 @@ describe('ConfigManager with a config file', () => {
     expect(config.promptsDir).toBe(path.resolve(tempDir, 'custom_prompts'));
     expect(config.secrets.MY_CUSTOM_SECRET).toBe('secret_value');
     expect(config.secrets.GOOGLEAI_API_KEY).toBe('test-key-from-env'); // from default
+
+    // Assert default plugins are present
+    expect(config.plugins.some(p => p.name === 'fetch')).toBe(true);
+    expect(config.plugins.some(p => p.name === 'firestore')).toBe(true);
+    expect(config.plugins.some(p => p.name === 'schedule')).toBe(true);
     
     // CLEANUP
     delete process.env.GOOGLEAI_API_KEY;
@@ -80,6 +85,11 @@ describe('ConfigManager without a config file', () => {
     expect(config.secrets.GOOGLEAI_API_KEY).toBe('test-key-for-validation');
     expect(config.secrets.GOOGLE_APPLICATION_CREDENTIALS).toBe('./fake-creds.json');
     expect(config.promptsDir).toBe(path.resolve(tempDir, 'prompts'));
+
+    // Assert default plugins are present
+    expect(config.plugins.some(p => p.name === 'fetch')).toBe(true);
+    expect(config.plugins.some(p => p.name === 'firestore')).toBe(true);
+    expect(config.plugins.some(p => p.name === 'schedule')).toBe(true);
 
     // CLEANUP
     delete process.env.GOOGLEAI_API_KEY;

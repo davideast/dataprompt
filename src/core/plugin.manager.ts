@@ -1,8 +1,5 @@
 import { DatapromptConfig } from './config.js';
 import { DatapromptPlugin, DataActionProvider, DataSourceProvider, TriggerProvider } from './interfaces.js';
-import { firestorePlugin } from '../plugins/firebase/public.js';
-import { schedulerPlugin } from '../plugins/scheduler/index.js';
-import { fetchPlugin } from '../plugins/fetch/index.js';
 
 export class PluginManager {
   #dataSources = new Map<string, DataSourceProvider>();
@@ -10,7 +7,7 @@ export class PluginManager {
   #triggers = new Map<string, TriggerProvider>(); // Added map for triggers
 
   constructor(config: DatapromptConfig) {
-    const allPlugins = this.#resolvePlugins(config.plugins);
+    const allPlugins = config.plugins;
     
     for (const plugin of allPlugins) {
       this.#registerPlugin(plugin);
@@ -33,14 +30,6 @@ export class PluginManager {
     }
   }
   
-  #resolvePlugins = (userPlugins: DatapromptPlugin[] = []): DatapromptPlugin[] => {
-    const plugins = [...userPlugins];
-    if (!plugins.some(p => p.name === 'firestore')) plugins.push(firestorePlugin());
-    if (!plugins.some(p => p.name === 'fetch')) plugins.push(fetchPlugin());
-    if (!plugins.some(p => p.name === 'schedule')) plugins.push(schedulerPlugin());
-    return plugins;
-  }
-
   public getDataSource(name: string): DataSourceProvider {
     const provider = this.#dataSources.get(name);
     if (!provider) {

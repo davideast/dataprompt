@@ -3,15 +3,16 @@ import { describe, it, expect } from 'vitest';
 import { PluginManager } from '../../src/core/plugin.manager.js';
 import { DatapromptConfig } from '../../src/core/config.js';
 import { DatapromptPlugin } from '../../src/core/interfaces.js';
+import { getDefaultPlugins } from '../../src/core/default-plugins.js';
 
 describe('PluginManager', () => {
-  it('should register default plugins if none are provided', () => {
+  it('should register provided plugins', () => {
     const mockConfig: DatapromptConfig = {
       rootDir: '/mock',
       promptsDir: '/mock/prompts',
       schemaFile: '/mock/schema.ts',
       secrets: {},
-      plugins: [] // Start with an empty plugins array
+      plugins: getDefaultPlugins()
     };
 
     const manager = new PluginManager(mockConfig);
@@ -22,7 +23,7 @@ describe('PluginManager', () => {
     expect(actions.map(a => a.name)).toEqual(expect.arrayContaining(['firestore']));
   });
 
-  it('should register user-provided plugins alongside defaults', () => {
+  it('should register user-provided plugins alongside others', () => {
     const userPlugin: DatapromptPlugin = {
       name: 'custom-plugin',
       createDataSource: () => ({ name: 'custom-source', fetchData: async () => ({}) }),
@@ -34,7 +35,7 @@ describe('PluginManager', () => {
       promptsDir: '/mock/prompts',
       schemaFile: '/mock/schema.ts',
       secrets: {},
-      plugins: [userPlugin]
+      plugins: [userPlugin, ...getDefaultPlugins()]
     };
 
     const manager = new PluginManager(mockConfig);

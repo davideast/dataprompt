@@ -3,9 +3,7 @@ import { z } from 'genkit';
 import { findUp } from 'find-up';
 import { DatapromptPlugin } from './interfaces.js';
 import { DatapromptUserConfig, DatapromptConfig } from './config.js';
-import { firestorePlugin } from '../plugins/firebase/public.js';
-import { schedulerPlugin } from '../plugins/scheduler/index.js';
-import { fetchPlugin } from '../plugins/fetch/index.js';
+import { resolvePlugins } from './default-plugins.js';
 import { pathToFileURL } from 'node:url';
 
 const CoreSecretsSchema = z.object({
@@ -67,7 +65,7 @@ export class ConfigManager {
     mergedConfig.schemaFile = path.resolve(rootDir, mergedConfig.schemaFile);
     
     // Resolve plugins based on the potentially overridden plugins array.
-    mergedConfig.plugins = this.#resolvePlugins(userConfig?.plugins);
+    mergedConfig.plugins = resolvePlugins(userConfig?.plugins);
 
     // Validate the final, fully merged secrets object.
     this.#validateSecrets(mergedConfig);
@@ -90,14 +88,6 @@ export class ConfigManager {
     if (userConfig?.rootDir) return path.resolve(this.#projectRoot, userConfig.rootDir);
     const packageJsonPath = await findUp('package.json', { cwd: this.#projectRoot });
     return packageJsonPath ? path.dirname(packageJsonPath) : this.#projectRoot;
-  }
-
-  #resolvePlugins = (userPlugins: DatapromptPlugin[] = []): DatapromptPlugin[] => {
-    const plugins = [...userPlugins];
-    if (!plugins.some(p => p.name === 'firestore')) plugins.push(firestorePlugin());
-    if (!plugins.some(p => p.name === 'fetch')) plugins.push(fetchPlugin());
-    if (!plugins.some(p => p.name === 'schedule')) plugins.push(schedulerPlugin());
-    return plugins;
   }
 
   // This method now only validates and throws on error. It does not return a value.
