@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { ConfigManager } from '..//src/core/config.manager.js';
+import { ConfigManager } from '../../src/core/config.manager.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,7 +15,7 @@ describe('ConfigManager with a config file', () => {
 
     // THIS IS THE KEY FIX: Add a package.json to the temp directory to properly
     // define it as the root for the test, preventing findUp from traversing higher.
-    await fs.writeFile(path.join(tempDir, 'package.json'), '{}');
+    await fs.writeFile(path.join(tempDir, 'package.json'), JSON.stringify({ type: 'module' }));
 
     const dpConfigContent = `
       export default {
@@ -58,13 +58,52 @@ describe('ConfigManager with a config file', () => {
   });
 });
 
+describe('ConfigManager Validation', () => {
+  let tempDir: string;
+
+  beforeAll(async () => {
+    tempDir = path.resolve(__dirname, 'temp_validation');
+    await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(path.join(tempDir, 'package.json'), JSON.stringify({ type: 'module' }));
+  });
+
+  afterAll(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('should validate secrets against plugin schema', async () => {
+    const dpConfigContent = `
+      import { z } from 'genkit';
+      const secretPlugin = {
+        name: 'secret-plugin',
+        provideSecrets: () => ({
+          secrets: {},
+          schema: z.object({
+            REQUIRED_SECRET: z.string().min(1)
+          })
+        })
+      };
+      export default {
+        plugins: [secretPlugin],
+        secrets: {}
+      };
+    `;
+
+    await fs.writeFile(path.join(tempDir, 'dataprompt.config.js'), dpConfigContent);
+
+    const configManager = new ConfigManager({ projectRoot: tempDir });
+
+    await expect(configManager.load()).rejects.toThrow(/REQUIRED_SECRET/);
+  });
+});
+
 describe('ConfigManager without a config file', () => {
   let tempDir: string;
 
   beforeAll(async () => {
     tempDir = path.resolve(__dirname, 'temp_without_config');
     await fs.mkdir(tempDir, { recursive: true });
-    await fs.writeFile(path.join(tempDir, 'package.json'), '{}');
+    await fs.writeFile(path.join(tempDir, 'package.json'), JSON.stringify({ type: 'module' }));
   });
 
   afterAll(async () => {
