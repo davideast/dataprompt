@@ -47,4 +47,28 @@ describe('PluginManager', () => {
     // Ensure defaults are still present
     expect(dataSources.map(ds => ds.name)).toContain('fetch');
   });
+
+  it('should register and retrieve trigger providers', () => {
+    const triggerPlugin: DatapromptPlugin = {
+      name: 'trigger-plugin',
+      createTrigger: () => ({
+        name: 'custom-trigger',
+        createTrigger: () => ({ create: () => ({}) as any })
+      })
+    };
+
+    const mockConfig: DatapromptConfig = {
+      rootDir: '/mock',
+      promptsDir: '/mock/prompts',
+      schemaFile: '/mock/schema.ts',
+      secrets: {},
+      plugins: [triggerPlugin]
+    };
+
+    const manager = new PluginManager(mockConfig);
+    const trigger = manager.getTrigger('custom-trigger');
+
+    expect(trigger).toBeDefined();
+    expect(trigger.name).toBe('custom-trigger');
+  });
 });
