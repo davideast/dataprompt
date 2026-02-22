@@ -6,6 +6,7 @@ import { Server } from 'http';
 import { events } from '../../core/events.js';
 import { createPromptServer } from '../../core/dataprompt.js';
 import { ScheduledTask } from 'node-cron';
+import { CliCommand } from '../interfaces.js';
 
 const promptMessages = [
   'Training prompt engineers',
@@ -67,8 +68,7 @@ function formatTasks(tasks: Map<string, ScheduledTask>) {
     .join('\n');
 }
 
-export async function devCommand() {
-  const args = process.argv.slice(2);
+async function devCommand(args: string[]) {
   const portFlag = args.indexOf('--port');
   const port = portFlag !== -1 ? parseInt(args[portFlag + 1]) : 3033;
 
@@ -246,3 +246,12 @@ export async function devCommand() {
     process.exit(1);
   }
 }
+
+export const command: CliCommand = {
+  name: 'dev',
+  description: 'Start development server',
+  usage: 'dev [--port <port>]',
+  run: async (args: string[]) => {
+    await devCommand(args);
+  }
+};

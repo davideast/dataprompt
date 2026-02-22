@@ -2,8 +2,9 @@ import * as p from "@clack/prompts";
 import color from "picocolors";
 import { promises as fs } from "fs";
 import path from "path";
+import { CliCommand } from "../interfaces.js";
 
-export async function createProject(projectName: string) {
+async function createProject(projectName: string) {
   const projectPath = path.resolve(projectName);
   const s = p.spinner();
 
@@ -222,3 +223,19 @@ npm run dev`;
     process.exit(1);
   }
 }
+
+export const command: CliCommand = {
+  name: 'create',
+  description: 'Create a new dataprompt project',
+  usage: 'create <project-name>',
+  run: async (args: string[]) => {
+    if (!args[0]) {
+      console.log(`
+Usage:
+  ${color.green('dataprompt create <project-name>')}
+      `);
+      process.exit(1);
+    }
+    await createProject(args[0]);
+  }
+};
