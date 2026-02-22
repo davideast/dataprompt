@@ -48,6 +48,7 @@ export class ConfigManager {
         GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       },
       rootDir,
+      logLevel: 'info',
     };
 
     // THIS IS THE KEY FIX: Perform an explicit and correct merge.

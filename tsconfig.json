@@ -16,7 +16,7 @@
   },
   "include": [
     "src/index.ts",
-    "src/cli/index.ts",
+    "src/cli/**/*.ts",
     "src/plugins/**/*.ts",
     "src/context/index.ts"
   ],
