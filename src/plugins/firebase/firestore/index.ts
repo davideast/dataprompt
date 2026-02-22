@@ -1,10 +1,11 @@
 import { z } from 'genkit';
-import { DataActionProvider, DataSourceProvider, DatapromptPlugin } from '../../../core/interfaces.js';
+import { DataActionProvider, DataSourceProvider, DatapromptPlugin, FetchDataParams, ExecuteParams } from '../../../core/interfaces.js';
 import { getFirebaseApp } from '../app.js'
 import { getFirestore } from 'firebase-admin/firestore';
 import { fetchData } from './source.js'
 import { execute } from './actions.js'
 import { FirebasePluginConfig } from '../types.js';
+import { FirestoreSourceConfig, FirestoreBatchConfig } from './types.js';
 
 const FirestorePluginSecrets = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional()
@@ -20,19 +21,21 @@ export function firestorePlugin(
 
   return {
     name,
-    createDataSource(): DataSourceProvider {
+    createDataSource(): DataSourceProvider<unknown> {
       return {
         name,
-        fetchData(params) {
-          return fetchData({ db, ...params })
+        fetchData(params: FetchDataParams<unknown>) {
+          const config = params.config as FirestoreSourceConfig;
+          return fetchData({ db, ...params, config })
         }
       }
     },
-    createDataAction(): DataActionProvider {
+    createDataAction(): DataActionProvider<unknown> {
       return {
         name,
-        execute(params): Promise<void> {
-          return execute({ db, ...params })
+        execute(params: ExecuteParams<unknown>): Promise<void> {
+          const config = params.config as FirestoreBatchConfig;
+          return execute({ db, ...params, config })
         }
       }
     },

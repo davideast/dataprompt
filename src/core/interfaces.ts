@@ -17,8 +17,8 @@ export const RequestContextSchema = z.object({
     z.union([z.string(), z.array(z.string())])
   ).optional(),
   body: z.object({
-    json: z.any().optional(),
-    form: z.record(z.string(), z.any()).optional(),
+    json: z.unknown().optional(),
+    form: z.record(z.string(), z.unknown()).optional(),
     text: z.string().optional()
   }).optional(),
   requestId: z.string().optional()
@@ -28,48 +28,48 @@ export type RequestContext = z.infer<typeof RequestContextSchema>;
 
 export interface DatapromptPlugin<Schema extends z.AnyZodObject = z.AnyZodObject> {
   name: string;
-  createDataSource?(): DataSourceProvider;
-  createDataAction?(): DataActionProvider;
+  createDataSource?(): DataSourceProvider<unknown>;
+  createDataAction?(): DataActionProvider<unknown>;
   createTrigger?(): TriggerProvider;
   provideSecrets?(): {
     secrets: Partial<z.infer<Schema>>;
     schema?: Schema;
   } | undefined;
-  provideGenkitPlugins?(): any[];
+  provideGenkitPlugins?(): unknown[];
 }
 
-export type FetchDataParams = {
+export type FetchDataParams<Config = unknown> = {
   request: RequestContext;
-  config: any;
+  config: Config;
   file: DatapromptFile;
 }
 
-export interface DataSourceProvider {
+export interface DataSourceProvider<Config = unknown> {
   name: string;
-  fetchData(params: FetchDataParams): Promise<Record<string, any> | string>;
+  fetchData(params: FetchDataParams<Config>): Promise<unknown>;
 }
 
-export type ExecuteParams = {
+export type ExecuteParams<Config = unknown> = {
   request: RequestContext;
-  config: any;
-  promptSources: Record<string, any>;
+  config: Config;
+  promptSources: Record<string, unknown>;
   file: DatapromptFile;
 }
 
-export interface DataActionProvider {
+export interface DataActionProvider<Config = unknown> {
   name: string;
-  execute(params: ExecuteParams): Promise<void>;
+  execute(params: ExecuteParams<Config>): Promise<void>;
 }
 
 export interface TriggerConfig {
   type: string;
-  config: any;
+  config: unknown;
 }
 
 export interface Trigger {
   create(
     route: DatapromptRoute,
-    config: any,
+    config: unknown,
   ): ScheduledTask;
 }
 

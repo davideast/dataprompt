@@ -1,5 +1,5 @@
 import { RequestContext } from '../../core/interfaces.js';
-import { DataSourceProvider, DatapromptPlugin } from '../../core/interfaces.js';
+import { DataSourceProvider, DatapromptPlugin, FetchDataParams } from '../../core/interfaces.js';
 
 export interface FetchConfig {
   url: string; 
@@ -10,14 +10,12 @@ export function fetchPlugin(): DatapromptPlugin {
   const name = 'fetch'
   return {
     name,
-    createDataSource(): DataSourceProvider {
+    createDataSource(): DataSourceProvider<unknown> {
       return {
         name,
-        fetchData(params: { 
-          request: RequestContext, 
-          config: string | FetchConfig 
-        }) {
-          return fetchData(params)
+        fetchData(params: FetchDataParams<unknown>) {
+          const config = params.config as string | FetchConfig;
+          return fetchData({ ...params, config });
         }
       }
     }

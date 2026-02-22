@@ -8,8 +8,8 @@ import {
   DataSourceProvider,
   DataActionProvider,
   DatapromptPlugin,
-  RequestContext,
-  DatapromptFile,
+  FetchDataParams,
+  ExecuteParams,
 } from '../../core/interfaces.js';
 
 export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptPlugin {
@@ -19,28 +19,21 @@ export function fsPlugin(pluginConfig: FileSystemPluginConfig = {}): DatapromptP
 
   return {
     name,
-    createDataSource(): DataSourceProvider {
+    createDataSource(): DataSourceProvider<unknown> {
       return {
         name,
-        async fetchData(params: {
-          request: RequestContext;
-          config: string | FileSystemReadConfig;
-          file: DatapromptFile;
-        }): Promise<Record<string, any> | Buffer | string> {
-          return fetchData(params, sandboxPath);
+        async fetchData(params: FetchDataParams<unknown>): Promise<Record<string, any> | Buffer | string> {
+          const config = params.config as string | FileSystemReadConfig;
+          return fetchData({ ...params, config }, sandboxPath);
         },
       };
     },
-    createDataAction(): DataActionProvider {
+    createDataAction(): DataActionProvider<unknown> {
       return {
         name,
-        async execute(params: {
-          request: RequestContext;
-          config: Record<WriteOperationType, FileSystemWriteConfig | FileSystemWriteConfig[]>;
-          promptSources: Record<string, any>;
-          file: DatapromptFile;
-        }): Promise<void> {
-          return execute(params, sandboxPath)
+        async execute(params: ExecuteParams<unknown>): Promise<void> {
+          const config = params.config as Record<WriteOperationType, FileSystemWriteConfig | FileSystemWriteConfig[]>;
+          return execute({ ...params, config }, sandboxPath)
         },
       };
     },

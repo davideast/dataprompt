@@ -19,8 +19,9 @@ class DevScheduleTrigger implements Trigger {
 
   create(
     route: DatapromptRoute,
-    cronExpression: string,
+    config: unknown,
   ): ScheduledTask {
+    const cronExpression = config as string;
     const name = `flow-${route.flowDef.name}`
 
     if (!this.cron.validate(cronExpression)) {

@@ -20,7 +20,7 @@ export function createGenkitPrompt(options: {
   const promptInputSchema = z.object({
     ...Object.fromEntries(
       Object.entries(sources).flatMap(([sourceName, sourceConfig]) => {
-        return Object.keys(sourceConfig).map(propertyName => [propertyName, z.any()])
+        return Object.keys(sourceConfig).map(propertyName => [propertyName, z.unknown()])
       })
     ),
     request: RequestContextSchema,
@@ -63,7 +63,7 @@ export class Prompt {
    * Orchestrates the full execution of the prompt.
    * @param request The incoming request context.
    */
-  async execute(request: RequestContext): Promise<any> {
+  async execute(request: RequestContext): Promise<unknown> {
     // 1. Fetch all necessary data sources.
     const promptSources = await this.#fetchData(request);
 
@@ -83,9 +83,9 @@ export class Prompt {
   /**
    * Fetches data from all sources defined in the prompt's frontmatter.
    */
-  async #fetchData(request: RequestContext): Promise<Record<string, any>> {
+  async #fetchData(request: RequestContext): Promise<Record<string, unknown>> {
     const sources = this.#flowDef.data?.prompt?.sources || {};
-    const promptSources: Record<string, any> = {};
+    const promptSources: Record<string, unknown> = {};
 
     for (const [sourceName, sourceConfig] of Object.entries(sources)) {
       const sourceProvider = this.#pluginManager.getDataSource(sourceName);
@@ -107,7 +107,7 @@ export class Prompt {
   /**
    * Executes all result actions defined in the prompt's frontmatter.
    */
-  async #executeActions(request: RequestContext, promptSources: Record<string, any>, result: { output: any }): Promise<void> {
+  async #executeActions(request: RequestContext, promptSources: Record<string, unknown>, result: { output: unknown }): Promise<void> {
     const resultActions = this.#flowDef.data?.prompt?.result || {};
     for (const [actionName, actionConfig] of Object.entries(resultActions)) {
       await this.#ai.run(`ResultAction: ${actionName}`, async () => {
