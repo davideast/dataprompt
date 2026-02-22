@@ -40,7 +40,7 @@ This document outlines strategies to minimize merge conflicts and improve produc
 ## Discrete Action Items
 
 ### Immediate Actions
-1.  **Refactor Plugin Registration**: Modify `PluginManager` to accept a list of plugins without hardcoding defaults in the class itself. Move default plugin logic to a separate `DefaultPlugins` module.
+1.  [x] **Refactor Plugin Registration**: Modify `PluginManager` to accept a list of plugins without hardcoding defaults in the class itself. Move default plugin logic to a separate `DefaultPlugins` module. (Completed 2025-02-18)
 2.  **Harden Types**: systematically review `src/core/interfaces.ts` and replace `any` with generic types or `unknown` with validation. specifically target `RequestContext`, `DataSourceProvider`, and `DataActionProvider`.
 3.  **Decompose `dataprompt.ts`**: Extract `createDefaultGenkit` and `loadUserGenkitInstance` into a separate `GenkitFactory` module.
 
